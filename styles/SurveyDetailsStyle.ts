@@ -72,14 +72,21 @@ const SurveyDetailsStyles = StyleSheet.create({
     color: '#333',
   },
   modalOptionButton: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    marginBottom: 5,
+    width: '100%',  // Ensure full width
+    paddingVertical: 1,  // Increase padding for better click area
+    marginBottom: 8,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,  // Make it more button-like
+    backgroundColor: '#f5f5f5',  // Light background for better visibility
   },
+
   modalOptionText: {
-    fontSize: 16,
+    width: '100%', 
+    fontSize: 13,
+    textAlign: 'center',
     color: '#444',
   },
   buttonContainer: {

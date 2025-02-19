@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Dialog, Portal, Button } from 'react-native-paper';  // Importing Dialog from react-native-paper
-import SurveyDetailsStyles from '../../styles/SurveyDetailsStyle';
 import Toast from 'react-native-toast-message';
-import { getResultId, submitPreSurveyDetails } from '../../services/api'; // Import your validateProjectId API
-import { getCurrentDateTime } from '../../services/dateUtils';
-
-const SurveyDetailsScreen = ({ route, navigation }: any) => {
-  const { ProjectId, surveyId } = route.params;
-
+import { useLocalSearchParams, useRouter } from 'expo-router';  // ✅ Expo Router
+import { getResultId } from '../services/api';
+import { getCurrentDateTime } from '../services/dateUtils';
+import SurveyDetailsStyles from '@/styles/SurveyDetailsStyle';
+const SurveyDetailsScreen = () => {
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('IN');
   const [location, setLocation] = useState('');
@@ -17,6 +15,10 @@ const SurveyDetailsScreen = ({ route, navigation }: any) => {
   const [startZone, setStartZone] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  const router = useRouter();  // ✅ Use router instead of 
+  const params = useLocalSearchParams();
+  const ProjectId = Array.isArray(params.ProjectId) ? params.ProjectId[0] : params.ProjectId;
+  const surveyId = Array.isArray(params.surveyId) ? params.surveyId[0] : params.surveyId;
   // Handle zone selection
   const handleZoneSelect = (zone: string) => {
     setStartZone(zone);
@@ -31,8 +33,23 @@ const SurveyDetailsScreen = ({ route, navigation }: any) => {
         if (response.data.status === "success") {
           const { FullDateTime, time, date } = getCurrentDateTime();
           const ResultID = response.data.data.resultId ? response.data.data.resultId : FullDateTime;
-          const surveyData = { ProjectId, SurveyID: surveyId, ResultID, outletName, state, Location: location, Address: address, Zone: startZone, country, StartDate: date, StartTime: time };
-          navigation.navigate('Questionnaire', surveyData);
+          router.push({
+            pathname: "/QuestionnaireScreen",
+            params: {
+              ProjectId,
+              SurveyID: surveyId,
+              ResultID,
+              outletName,
+              state,
+              Location: location,
+              Address: address,
+              Zone: startZone,
+              country,
+              StartDate: date,
+              StartTime: time,
+            },
+          });
+
         } else {
           Toast.show({
             type: 'error',
@@ -130,7 +147,10 @@ const SurveyDetailsScreen = ({ route, navigation }: any) => {
                   onPress={() => handleZoneSelect(zone)}
                   style={SurveyDetailsStyles.modalOptionButton}
                 >
-                  {zone}
+                  <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
+                    <Text style={SurveyDetailsStyles.modalOptionText}>{zone}</Text>
+                  </View>
+
                 </Button>
               ))}
             </Dialog.Content>
@@ -139,7 +159,7 @@ const SurveyDetailsScreen = ({ route, navigation }: any) => {
 
         {/* Previous and Next Buttons */}
         <View style={SurveyDetailsStyles.buttonContainer}>
-          <TouchableOpacity style={SurveyDetailsStyles.prevButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={SurveyDetailsStyles.prevButton} onPress={() => router.back()}>
             <Text style={SurveyDetailsStyles.submitButtonText}>Previous</Text>
           </TouchableOpacity>
           <TouchableOpacity style={SurveyDetailsStyles.nextButton} onPress={handleSubmit}>

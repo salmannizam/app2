@@ -1,32 +1,36 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
-import { validateProjectId } from '../../services/api'; // Import your validateProjectId API
 import Toast from 'react-native-toast-message';
+import { RootStackParamList } from '../types/navigation';
+import { validateProjectId } from '../services/api';
+import { useRouter } from 'expo-router'; // ✅ Expo Router Navigation
 
-// This type maps 'Home' and 'SurveyDetails' screens to their parameters
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SurveyDetails'>;
 
-interface Props {
-  navigation: HomeScreenNavigationProp;
-}
 
-const HomeScreen: React.FC<Props> = ({ navigation }) => {
+const HomeScreen: React.FC = () => {
   const [ProjectId, setProjectId] = useState('');
   const [surveyId, setSurveyId] = useState('');
   const [projectIdValid, setProjectIdValid] = useState(true);
   const [surveyIdValid, setSurveyIdValid] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
+  const router = useRouter(); // ✅ Use Expo Router
+
   const handleNavigate = async () => {
-    // navigation.navigate('SurveyDetails', { ProjectId: '1', surveyId: '2' });
     if (ProjectId && surveyId) {
       setIsLoading(true);
       try {
         const response = await validateProjectId(ProjectId, surveyId);
         if (response.data.status === "success") {
-          navigation.navigate('SurveyDetails', { ProjectId, surveyId: response.data.data.surveyId });
+          router.push({ 
+            pathname: '/SurveyDetailsScreen',
+            params: { 
+              ProjectId, 
+              surveyId: response.data.data.surveyId 
+            } 
+          });
+        
+          
         } else {
           setProjectIdValid(false);
           Toast.show({
@@ -61,7 +65,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <ImageBackground style={styles.container}>
+    <View style={styles.container}>
       {/* Product ID Input */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Project ID</Text>
@@ -103,7 +107,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.buttonText}>Proceed</Text>
         )}
       </TouchableOpacity>
-    </ImageBackground>
+    </View>
   );
 };
 

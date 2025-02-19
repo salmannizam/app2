@@ -4,13 +4,13 @@ import { Button, Card, TextInput, Snackbar } from 'react-native-paper';
 import * as ImagePicker from "expo-image-picker";
 import Toast from 'react-native-toast-message';
 import Collapsible from 'react-native-collapsible'; // Add this import for collapsible functionality
-import { getCurrentDateTime } from '../../services/dateUtils';
+import { getCurrentDateTime } from '../app/services/dateUtils';
 import * as Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
 import * as FileSystem from 'expo-file-system';
-import { getSurveyQuestions, submitPreSurveyDetails } from '../../services/api';
+import { getSurveyQuestions, submitPreSurveyDetails } from '../app/services/api';
 import { Dialog, Portal } from 'react-native-paper';
 
 interface Answer {

@@ -1,0 +1,215 @@
+[
+    {
+      "QuestionID": 10033164,
+      "Question": "Please Select Brand",
+      "Questiontype": "Single Choice",
+      "Mandatory": "Yes",
+      "Matrixtype": "",
+      "Datatype": "",
+      "Choices": [
+        {
+          "ChoiceText": "AHO"
+        },
+        {
+          "ChoiceText": "CP"
+        },
+        {
+          "ChoiceText": "GLC"
+        },
+        {
+          "ChoiceText": "HJ"
+        },
+        {
+          "ChoiceText": "HON"
+        }
+      ]
+    },
+    {
+      "QuestionID": 10033168,
+      "Question": "UNIT CODE",
+      "Questiontype": "Matrix",
+      "Mandatory": "No",
+      "Matrixtype": "Drop Down",
+      "Datatype": "",
+      "Choices": [
+        {
+          "ChoiceText": "AL"
+        },
+        {
+          "ChoiceText": "BD"
+        },
+        {
+          "ChoiceText": "BH"
+        },
+        {
+          "ChoiceText": "BL"
+        },
+        {
+          "ChoiceText": "BM"
+        },
+        {
+          "ChoiceText": "BT"
+        },
+        {
+          "ChoiceText": "BU"
+        },
+        {
+          "ChoiceText": "ID"
+        },
+        {
+          "ChoiceText": "JK"
+        },
+        {
+          "ChoiceText": "LK"
+        },
+        {
+          "ChoiceText": "MB"
+        },
+        {
+          "ChoiceText": "NP"
+        }
+      ]
+    },
+    {
+      "QuestionID": 10033169,
+      "Question": "Batch No.",
+      "Questiontype": "User Input",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": "Number"
+    },
+    {
+      "QuestionID": 10033170,
+      "Question": "Manufactured. Date",
+      "Questiontype": "User Input",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": "Date"
+    },
+    {
+      "QuestionID": 10000046,
+      "Question": "Are there any visual defects.?",
+      "Questiontype": "Single Choice",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Choices": [
+        {
+          "ChoiceText": "yes"
+        },
+        {
+          "ChoiceText": "no"
+        }],
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033173,
+      "Question": "Seal Broken.?",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033178,
+      "Question": "Are there any other defects.?",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033165,
+      "Question": "Unit of measurement",
+      "Questiontype": "Single Choice",
+      "Mandatory": "Yes",
+      "Matrixtype": "",
+      "Datatype": "",
+      "Choices": [
+        {
+          "ChoiceText": "Kg."
+        },
+        {
+          "ChoiceText": "Ltr."
+        },
+        {
+          "ChoiceText": "ml."
+        },
+        {
+          "ChoiceText": "gm."
+        }
+      ]
+    },
+    {
+      "QuestionID": 10033166,
+      "Question": "Sku Size",
+      "Questiontype": "Single Choice",
+      "Mandatory": "Yes",
+      "Matrixtype": "",
+      "Datatype": "",
+      "Choices": [
+        {
+          "ChoiceText": "100"
+        },
+        {
+          "ChoiceText": "200"
+        },
+        {
+          "ChoiceText": "250"
+        },
+        {
+          "ChoiceText": "500"
+        },
+        {
+          "ChoiceText": "1000"
+        }
+      ]
+    },
+    {
+      "QuestionID": 10033167,
+      "Question": "No. of SKU",
+      "Questiontype": "User Input",
+      "Mandatory": "Yes",
+      "Matrixtype": "",
+      "Datatype": "Number"
+    },
+    {
+      "QuestionID": 10033171,
+      "Question": "Expiry Date",
+      "Questiontype": "User Input",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": "Date"
+    },
+    {
+      "QuestionID": 10033174,
+      "Question": "Wrinkled label.?",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033175,
+      "Question": "Label Issues.?",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033176,
+      "Question": "Damaged Packaging.?",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    },
+    {
+      "QuestionID": 10033177,
+      "Question": "Faded or Illegible Printing",
+      "Questiontype": "Image",
+      "Mandatory": "No",
+      "Matrixtype": "",
+      "Datatype": ""
+    }
+  ]

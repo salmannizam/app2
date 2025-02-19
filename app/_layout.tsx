@@ -1,39 +1,33 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import Footer from "@/components/Footer";
+import { Stack } from "expo-router";
+// import { Provider as PaperProvider } from "react-native-paper";
+import { MD3LightTheme, PaperProvider } from 'react-native-paper';
+import Toast from "react-native-toast-message";
+import { View } from "react-native";
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
+export default function Layout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <PaperProvider theme={MD3LightTheme}>  
+      <View style={{ flex: 1 }}>
+        <Stack   screenOptions={{
+            headerShown: true, // Show the header
+            headerStyle: {
+              backgroundColor: "#1D3C6B", // Header background color
+            },
+            headerTintColor: "#FFFFFF", // Header text color
+            headerTitleStyle: {
+              fontSize: 20,
+              fontWeight: "bold",
+            },
+          }} >
+          {/* <Stack.Screen name="TestScreen" /> */}
+          <Stack.Screen name="HomeScreen" options={{ title: "" }} />
+          <Stack.Screen name="SurveyDetailsScreen"  options={{ title: "Survey Details" }} />
+          <Stack.Screen name="QuestionnaireScreen"  options={{ title: "Questionnaire" }}/>
+        </Stack>
+        <Footer />
+      </View>
+      <Toast />
+    </PaperProvider>
   );
 }
