@@ -115,9 +115,29 @@ Join our community of developers creating universal apps.
 
 rm -rf node_modules package-lock.json
 
+npm uninstall react-native-reanimated
+npm install react-native-reanimated
+
 npm install
+
 npm start -- --reset-cache
 npx expo prebuild
 cd android
 ./gradlew assembleRelease
 android/app/build/outputs/apk/release/app-release.apk
+
+
+/////////////
+need to remove this as it is for http in appjson
+    "android": {
+      "package": "com.salman.survey",
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "INTERNET"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml"
+    },
