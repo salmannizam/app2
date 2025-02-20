@@ -15,6 +15,7 @@ import { useLocalSearchParams } from 'expo-router';  // ✅ Expo Router
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router';
 
 interface Answer {
   QuestionID: number;
@@ -34,6 +35,8 @@ const QuestionnaireScreen = () => {
   const [openAccordion, setOpenAccordion] = useState<{ [key: number]: boolean }>({}); // Track accordion state for image upload
   const [showImageUploads, setShowImageUploads] = useState(false); // Track whether to show image upload questions
   const [completedSurveys, setCompletedSurveys] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false); // For Submit button loading
+
 
   const [openAccordionSurveys, setOpenAccordionSurveys] = useState<number | null>(null);  // For Completed Surveys
 
@@ -54,7 +57,10 @@ const QuestionnaireScreen = () => {
   const StartDate = params.StartDate?.toString() ?? "";
   const StartTime = params.StartTime?.toString() ?? "";
 
+  const router = useRouter(); // ✅ Use Expo Router
+
   useEffect(() => {
+    setLoading(true)
     async function getQuestion() {
       try {
         // Fetch the survey questions from your API
@@ -66,6 +72,7 @@ const QuestionnaireScreen = () => {
           const sortedQuestions = response.data.data.sort((a: { QuestionID: number; }, b: { QuestionID: number; }) => a.QuestionID - b.QuestionID);
           // Set the sorted questions to state
           setQuestions(sortedQuestions);
+          setLoading(false)
         } else {
           // Show an error toast if no questions were found
           Toast.show({
@@ -88,14 +95,14 @@ const QuestionnaireScreen = () => {
     }
 
     // Call the function to fetch questions
-    // getQuestion();
+    getQuestion();
 
-    const questionsData = require('../assets/questions.json');
+    // const questionsData = require('../assets/questions.json');
 
-    // Sorting questions by QuestionID in ascending order
-    const sortedQuestions = questionsData.sort((a: { QuestionID: number; }, b: { QuestionID: number; }) => a.QuestionID - b.QuestionID);
-    // Setting the sorted questions to state
-    setQuestions(sortedQuestions);
+    // // Sorting questions by QuestionID in ascending order
+    // const sortedQuestions = questionsData.sort((a: { QuestionID: number; }, b: { QuestionID: number; }) => a.QuestionID - b.QuestionID);
+    // // Setting the sorted questions to state
+    // setQuestions(sortedQuestions);
 
   }, [SurveyID]); // Dependency array ensures it runs when SurveyID changes
 
@@ -148,7 +155,15 @@ const QuestionnaireScreen = () => {
 
   const getAnswerDate = (questionID: string) => {
     const answer = answers.find((a) => a.QuestionID === questionID)?.answer;
-    return answer ? new Date(answer) : new Date(); // Convert saved date or use current date
+    if (answer) {
+      // Convert 'YYYYMMDD' to 'YYYY-MM-DD'
+      const year = answer.slice(0, 4);
+      const month = answer.slice(4, 6);
+      const day = answer.slice(6, 8);
+      return new Date(`${year}-${month}-${day}`);
+    } else {
+      return new Date(); // Return current date if no answer exists
+    }
   };
 
   const handleAnswerChange = (questionId: number, answer: any) => {
@@ -172,7 +187,7 @@ const QuestionnaireScreen = () => {
   };
 
   const handleSubmitSurvey = async () => {
-    setLoading(true);
+    setSubmitting(true);
     const mandatoryQuestions = questions.filter(q => q.Mandatory === "Yes");
 
     const missingAnswers = mandatoryQuestions.some(q =>
@@ -187,7 +202,7 @@ const QuestionnaireScreen = () => {
         text2: 'Please answer all mandatory questions before submitting.',
         visibilityTime: 3000,
       });
-      setLoading(false);
+      setSubmitting(false);
       return;
     }
 
@@ -207,7 +222,7 @@ const QuestionnaireScreen = () => {
         text2: "Please enter a valid date in YYYYMMDD format.",
         visibilityTime: 3000,
       });
-      setLoading(false);
+      setSubmitting(false);
       return;
     }
 
@@ -334,7 +349,7 @@ const QuestionnaireScreen = () => {
       });
 
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -589,37 +604,52 @@ const QuestionnaireScreen = () => {
         <Stack.Screen options={{ title: "Survey" }} />
 
         <View style={styles.container}>
-          <FlatList
-            data={filteredQuestions} // Combine regular and image-upload questions, with image uploads at the end
-            renderItem={({ item }) => {
-              if (item.Questiontype === 'Image') {
-                return renderImageUploadQuestions(item); // Render image-upload question
-              } else {
-                return renderRegularQuestions(item); // Render regular question
+          {loading ? (
+            <ActivityIndicator size="large" color="#5bc0de" style={{ flex: 1, justifyContent: "center" }} />
+          ) : (
+
+
+            <FlatList
+              data={filteredQuestions} // Combine regular and image-upload questions, with image uploads at the end
+              renderItem={({ item }) => {
+                if (item.Questiontype === 'Image') {
+                  return renderImageUploadQuestions(item); // Render image-upload question
+                } else {
+                  return renderRegularQuestions(item); // Render regular question
+                }
+              }}
+              keyExtractor={(item) => item.QuestionID.toString()}
+              contentContainerStyle={styles.scrollViewContainer}
+              keyboardShouldPersistTaps="handled"
+              ListFooterComponent={
+                <View style={styles.buttonContainer}>
+
+                  {submitting ? (
+                    <ActivityIndicator animating={true} size="large" color="#5bc0de" />
+                  ) : (
+                    <>
+                      <Button
+                        mode="contained"
+                        onPress={() => { router.replace('/HomeScreen'); }}
+                        style={{ backgroundColor: '#FF6F61' }} // Matching background color and white text
+                      >
+                        Go to Home Page
+                      </Button>
+
+
+                      <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
+                        Submit Survey
+                      </Button>
+                    </>
+
+
+                  )}
+                </View>
               }
-            }}
-            keyExtractor={(item) => item.QuestionID.toString()}
-            contentContainerStyle={styles.scrollViewContainer}
-            keyboardShouldPersistTaps="handled"
-            ListFooterComponent={
-              <View style={styles.buttonContainer}>
-                {/* <Button mode="outlined" onPress={} style={styles.addMoreButton} color="#5bc0de">
-          Back
-        </Button> */}
-
-                {loading ? (
-                  <ActivityIndicator animating={true} size="large" color="#5bc0de" />
-                ) : (
-                  <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
-                    Submit Survey
-                  </Button>
-                )}
-              </View>
-            }
-          />
-
+            />
+          )}
           {/* Completed Surveys Accordion */}
-          {completedSurveys.length > 0 && (
+          {!loading && completedSurveys.length > 0 && (
             <View style={styles.completedSurveysContainer}>
               <Text style={styles.completedSurveysTitle}>Added Surveys</Text>
               {completedSurveys.map((survey, index) => renderCompletedSurvey(survey[0], index))}  {/* Accessing survey[0] */}
@@ -722,11 +752,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     marginTop: 15,
   },
-  addMoreButton: {
-    flex: 1,
-    marginHorizontal: 5,
-    backgroundColor: 'blue',
-  },
+
   submitButton: {
     flex: 1,
     marginHorizontal: 5,
