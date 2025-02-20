@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler'; // ✅ Add this at the top
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Footer from "@/components/Footer";
 import { Stack } from "expo-router";
@@ -7,8 +8,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function Layout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+
         <PaperProvider theme={MD3LightTheme}>
           <Stack
             screenOptions={{
@@ -21,7 +23,7 @@ export default function Layout() {
           <Footer />
           <Toast />
         </PaperProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

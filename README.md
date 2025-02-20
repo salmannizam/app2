@@ -49,3 +49,75 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 # app2
+
+
+//////locally build
+{
+  "cli": {
+    "version": ">= 14.3.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "gradleCommand": ":app:assembleRelease",
+      "distribution": "store",
+      "android": {
+        "artifact": "apk"
+      },
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "track": "production"
+    }
+  }
+}
+
+
+
+//eas buiuld
+
+{
+  "cli": {
+    "version": ">= 14.3.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "development": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+
+
+
+
+<!-- ?????????????????? -->
+
+rm -rf node_modules package-lock.json
+
+npm install
+npm start -- --reset-cache
+npx expo prebuild
+cd android
+./gradlew assembleRelease
+android/app/build/outputs/apk/release/app-release.apk
