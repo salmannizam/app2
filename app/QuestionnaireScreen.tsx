@@ -14,6 +14,7 @@ import { getCurrentDateTime } from '../services/dateUtils';
 import { useLocalSearchParams } from 'expo-router';  // ✅ Expo Router
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Stack } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Answer {
   QuestionID: number;
@@ -584,47 +585,49 @@ const QuestionnaireScreen = () => {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Survey" }} />
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack.Screen options={{ title: "Survey" }} />
 
-      <View style={styles.container}>
-        <FlatList
-          data={filteredQuestions} // Combine regular and image-upload questions, with image uploads at the end
-          renderItem={({ item }) => {
-            if (item.Questiontype === 'Image') {
-              return renderImageUploadQuestions(item); // Render image-upload question
-            } else {
-              return renderRegularQuestions(item); // Render regular question
-            }
-          }}
-          keyExtractor={(item) => item.QuestionID.toString()}
-          contentContainerStyle={styles.scrollViewContainer}
-          keyboardShouldPersistTaps="handled"
-          ListFooterComponent={
-            <View style={styles.buttonContainer}>
-              {/* <Button mode="outlined" onPress={} style={styles.addMoreButton} color="#5bc0de">
+        <View style={styles.container}>
+          <FlatList
+            data={filteredQuestions} // Combine regular and image-upload questions, with image uploads at the end
+            renderItem={({ item }) => {
+              if (item.Questiontype === 'Image') {
+                return renderImageUploadQuestions(item); // Render image-upload question
+              } else {
+                return renderRegularQuestions(item); // Render regular question
+              }
+            }}
+            keyExtractor={(item) => item.QuestionID.toString()}
+            contentContainerStyle={styles.scrollViewContainer}
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={
+              <View style={styles.buttonContainer}>
+                {/* <Button mode="outlined" onPress={} style={styles.addMoreButton} color="#5bc0de">
           Back
         </Button> */}
 
-              {loading ? (
-                <ActivityIndicator animating={true} size="large" color="#5bc0de" />
-              ) : (
-                <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
-                  Submit Survey
-                </Button>
-              )}
+                {loading ? (
+                  <ActivityIndicator animating={true} size="large" color="#5bc0de" />
+                ) : (
+                  <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
+                    Submit Survey
+                  </Button>
+                )}
+              </View>
+            }
+          />
+
+          {/* Completed Surveys Accordion */}
+          {completedSurveys.length > 0 && (
+            <View style={styles.completedSurveysContainer}>
+              <Text style={styles.completedSurveysTitle}>Added Surveys</Text>
+              {completedSurveys.map((survey, index) => renderCompletedSurvey(survey[0], index))}  {/* Accessing survey[0] */}
             </View>
-          }
-        />
+          )}
 
-        {/* Completed Surveys Accordion */}
-        {completedSurveys.length > 0 && (
-          <View style={styles.completedSurveysContainer}>
-            <Text style={styles.completedSurveysTitle}>Added Surveys</Text>
-            {completedSurveys.map((survey, index) => renderCompletedSurvey(survey[0], index))}  {/* Accessing survey[0] */}
-          </View>
-        )}
-
-      </View>
+        </View>
+      </SafeAreaView>
     </>
 
   );

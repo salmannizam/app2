@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View, TouchableOpacity, ImageBackground, A
 import Toast from 'react-native-toast-message';
 import { validateProjectId } from '../services/api';
 import { useRouter } from 'expo-router'; // ✅ Expo Router Navigation
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 
 
@@ -59,7 +59,8 @@ const HomeScreen: React.FC = () => {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Home" }} />
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack.Screen options={{ title: "Home" }} />
         <View style={styles.container}>
           {/* Product ID Input */}
           <View style={styles.inputContainer}>
@@ -103,6 +104,7 @@ const HomeScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         </View>
+      </SafeAreaView>
     </>
   );
 
