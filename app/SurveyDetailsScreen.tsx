@@ -6,6 +6,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';  // ✅ Expo Rout
 import { getResultId } from '../services/api';
 import { getCurrentDateTime } from '../services/dateUtils';
 import SurveyDetailsStyles from '@/styles/SurveyDetailsStyle';
+import { Stack } from "expo-router";
+
 const SurveyDetailsScreen = () => {
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('IN');
@@ -32,23 +34,11 @@ const SurveyDetailsScreen = () => {
         const response = await getResultId(ProjectId, surveyId, outletName);
         if (response.data.status === "success") {
           const { FullDateTime, time, date } = getCurrentDateTime();
-          const ResultID = response.data.data.resultId ? response.data.data.resultId : FullDateTime;
-          router.push({
-            pathname: "/QuestionnaireScreen",
-            params: {
-              ProjectId,
-              SurveyID: surveyId,
-              ResultID,
-              outletName,
-              state,
-              Location: location,
-              Address: address,
-              Zone: startZone,
-              country,
-              StartDate: date,
-              StartTime: time,
-            },
-          });
+          const ResultID = response.data?.data?.resultId || FullDateTime;
+
+          router.push(
+            `/QuestionnaireScreen?ProjectId=${ProjectId}&SurveyID=${surveyId}&ResultID=${ResultID}&outletName=${outletName}&state=${state}&Location=${location}&Address=${address}&Zone=${startZone}&country=${country}&StartDate=${date}&StartTime=${time}`
+          );
 
         } else {
           Toast.show({
@@ -80,95 +70,100 @@ const SurveyDetailsScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={SurveyDetailsStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={SurveyDetailsStyles.formContainer}>
-        <Text style={SurveyDetailsStyles.title}>Pre-Survey Information</Text>
+    <>
+      <Stack.Screen options={{ title: "Survey Details" }} />
+      <KeyboardAvoidingView
+        style={SurveyDetailsStyles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={SurveyDetailsStyles.formContainer}>
+          <Text style={SurveyDetailsStyles.title}>Pre-Survey Information</Text>
 
-        {/* Input Fields */}
-        <View style={SurveyDetailsStyles.inputContainer}>
-          <Text style={SurveyDetailsStyles.label}>Address</Text>
-          <TextInput
-            style={SurveyDetailsStyles.input}
-            placeholder="Enter Address"
-            value={address}
-            onChangeText={setAddress}
-          />
-        </View>
+          {/* Input Fields */}
+          <View style={SurveyDetailsStyles.inputContainer}>
+            <Text style={SurveyDetailsStyles.label}>Address</Text>
+            <TextInput
+              style={SurveyDetailsStyles.input}
+              placeholder="Enter Address"
+              value={address}
+              onChangeText={setAddress}
+            />
+          </View>
 
-        <View style={SurveyDetailsStyles.inputContainer}>
-          <Text style={SurveyDetailsStyles.label}>State</Text>
-          <TextInput
-            style={SurveyDetailsStyles.input}
-            placeholder="Enter State"
-            value={state}
-            onChangeText={setState}
-          />
-        </View>
+          <View style={SurveyDetailsStyles.inputContainer}>
+            <Text style={SurveyDetailsStyles.label}>State</Text>
+            <TextInput
+              style={SurveyDetailsStyles.input}
+              placeholder="Enter State"
+              value={state}
+              onChangeText={setState}
+            />
+          </View>
 
-        <View style={SurveyDetailsStyles.inputContainer}>
-          <Text style={SurveyDetailsStyles.label}>Location</Text>
-          <TextInput
-            style={SurveyDetailsStyles.input}
-            placeholder="Enter Location"
-            value={location}
-            onChangeText={setLocation}
-          />
-        </View>
+          <View style={SurveyDetailsStyles.inputContainer}>
+            <Text style={SurveyDetailsStyles.label}>Location</Text>
+            <TextInput
+              style={SurveyDetailsStyles.input}
+              placeholder="Enter Location"
+              value={location}
+              onChangeText={setLocation}
+            />
+          </View>
 
-        <View style={SurveyDetailsStyles.inputContainer}>
-          <Text style={SurveyDetailsStyles.label}>Outlet Name</Text>
-          <TextInput
-            style={SurveyDetailsStyles.input}
-            placeholder="Enter Outlet Name"
-            value={outletName}
-            onChangeText={setOutletName}
-          />
-        </View>
+          <View style={SurveyDetailsStyles.inputContainer}>
+            <Text style={SurveyDetailsStyles.label}>Outlet Name</Text>
+            <TextInput
+              style={SurveyDetailsStyles.input}
+              placeholder="Enter Outlet Name"
+              value={outletName}
+              onChangeText={setOutletName}
+            />
+          </View>
 
-        {/* Zone Selection Button */}
-        <TouchableOpacity style={SurveyDetailsStyles.zoneButton} onPress={() => setIsModalVisible(true)}>
-          <Text style={SurveyDetailsStyles.zoneButtonText}>
-            {startZone || 'Select Zone'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Modal for Zone Selection */}
-        <Portal>
-          <Dialog visible={isModalVisible} onDismiss={() => setIsModalVisible(false)}>
-            <Dialog.Title>Select Zone</Dialog.Title>
-            <Dialog.Content>
-              {['East', 'West', 'South', 'North'].map(zone => (
-                <Button
-                  key={zone}
-                  mode="outlined"
-                  onPress={() => handleZoneSelect(zone)}
-                  style={SurveyDetailsStyles.modalOptionButton}
-                >
-                  <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
-                    <Text style={SurveyDetailsStyles.modalOptionText}>{zone}</Text>
-                  </View>
-
-                </Button>
-              ))}
-            </Dialog.Content>
-          </Dialog>
-        </Portal>
-
-        {/* Previous and Next Buttons */}
-        <View style={SurveyDetailsStyles.buttonContainer}>
-          <TouchableOpacity style={SurveyDetailsStyles.prevButton} onPress={() => router.back()}>
-            <Text style={SurveyDetailsStyles.submitButtonText}>Previous</Text>
+          {/* Zone Selection Button */}
+          <TouchableOpacity style={SurveyDetailsStyles.zoneButton} onPress={() => setIsModalVisible(true)}>
+            <Text style={SurveyDetailsStyles.zoneButtonText}>
+              {startZone || 'Select Zone'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={SurveyDetailsStyles.nextButton} onPress={handleSubmit}>
-            <Text style={SurveyDetailsStyles.submitButtonText}>Next</Text>
-          </TouchableOpacity>
+
+          {/* Modal for Zone Selection */}
+          <Portal>
+            <Dialog visible={isModalVisible} onDismiss={() => setIsModalVisible(false)}>
+              <Dialog.Title>Select Zone</Dialog.Title>
+              <Dialog.Content>
+                {['East', 'West', 'South', 'North'].map(zone => (
+                  <Button
+                    key={zone}
+                    mode="outlined"
+                    onPress={() => handleZoneSelect(zone)}
+                    style={SurveyDetailsStyles.modalOptionButton}
+                  >
+                    <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
+                      <Text style={SurveyDetailsStyles.modalOptionText}>{zone}</Text>
+                    </View>
+
+                  </Button>
+                ))}
+              </Dialog.Content>
+            </Dialog>
+          </Portal>
+
+          {/* Previous and Next Buttons */}
+          <View style={SurveyDetailsStyles.buttonContainer}>
+            <TouchableOpacity style={SurveyDetailsStyles.prevButton} onPress={() => router.back()}>
+              <Text style={SurveyDetailsStyles.submitButtonText}>Previous</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={SurveyDetailsStyles.nextButton} onPress={handleSubmit}>
+              <Text style={SurveyDetailsStyles.submitButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </>
   );
+
+
 };
 
 export default SurveyDetailsScreen;

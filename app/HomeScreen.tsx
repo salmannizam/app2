@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { RootStackParamList } from '../types/navigation';
 import { validateProjectId } from '../services/api';
 import { useRouter } from 'expo-router'; // ✅ Expo Router Navigation
 
+import { Stack } from "expo-router";
 
 
 const HomeScreen: React.FC = () => {
@@ -22,15 +22,8 @@ const HomeScreen: React.FC = () => {
       try {
         const response = await validateProjectId(ProjectId, surveyId);
         if (response.data.status === "success") {
-          router.push({ 
-            pathname: '/SurveyDetailsScreen',
-            params: { 
-              ProjectId, 
-              surveyId: response.data.data.surveyId 
-            } 
-          });
-        
-          
+          router.push(`/SurveyDetailsScreen?ProjectId=${ProjectId}&surveyId=${response.data.data?.surveyId || ''}`);
+
         } else {
           setProjectIdValid(false);
           Toast.show({
@@ -65,50 +58,55 @@ const HomeScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Product ID Input */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Project ID</Text>
-        <TextInput
-          style={[styles.input, !projectIdValid && styles.inputError]}
-          placeholder="Enter Project ID"
-          placeholderTextColor="#888"
-          value={ProjectId}
-          onChangeText={text => {
-            setProjectId(text);
-            setProjectIdValid(true);
-          }}
-        />
-      </View>
+    <>
+      <Stack.Screen options={{ title: "Home" }} />
+        <View style={styles.container}>
+          {/* Product ID Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Project ID</Text>
+            <TextInput
+              style={[styles.input, !projectIdValid && styles.inputError]}
+              placeholder="Enter Project ID"
+              placeholderTextColor="#888"
+              value={ProjectId}
+              onChangeText={text => {
+                setProjectId(text);
+                setProjectIdValid(true);
+              }}
+            />
+          </View>
 
-      {/* Survey ID Input */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Survey ID</Text>
-        <TextInput
-          style={[styles.input, !surveyIdValid && styles.inputError]}
-          placeholder="Enter Survey ID"
-          placeholderTextColor="#888"
-          value={surveyId}
-          onChangeText={text => {
-            setSurveyId(text);
-            setSurveyIdValid(true);
-          }}
-        />
-      </View>
+          {/* Survey ID Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Survey ID</Text>
+            <TextInput
+              style={[styles.input, !surveyIdValid && styles.inputError]}
+              placeholder="Enter Survey ID"
+              placeholderTextColor="#888"
+              value={surveyId}
+              onChangeText={text => {
+                setSurveyId(text);
+                setSurveyIdValid(true);
+              }}
+            />
+          </View>
 
-      {/* Proceed Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleNavigate}
-        disabled={isLoading}>
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Proceed</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+          {/* Proceed Button */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleNavigate}
+            disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Proceed</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+    </>
   );
+
+
 };
 
 const styles = StyleSheet.create({
