@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to your camera to take photos.",
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload images.",
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save images to your photo library."
       }
@@ -18,6 +19,7 @@
     "android": {
       "package": "com.salman.survey",
       "permissions": [
+        "CAMERA",
         "READ_MEDIA_IMAGES",
         "INTERNET"
       ],

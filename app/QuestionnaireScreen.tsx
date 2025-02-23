@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { Button, Card, TextInput, Snackbar } from 'react-native-paper';
 import * as ImagePicker from "expo-image-picker";
 import Toast from 'react-native-toast-message';
@@ -65,7 +65,7 @@ const QuestionnaireScreen = () => {
       try {
         // Fetch the survey questions from your API
         const response = await getSurveyQuestions(SurveyID);
-        console.log(response.data)
+        // console.log(response.data)
         // Check if the API response is successful
         if (response.data.status === "success") {
           // Sort questions by QuestionID in ascending order
@@ -166,6 +166,20 @@ const QuestionnaireScreen = () => {
     }
   };
 
+  const calculateAging = (mfgdate: Date | null) => {
+    if (!mfgdate) return 0; // Return 0 if no date is selected
+
+    const currentDate = new Date();
+
+    if (mfgdate > currentDate) return 0; // Return 0 if date is in the future
+
+    const timeDifference = currentDate.getTime() - mfgdate.getTime(); // Difference in milliseconds
+    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24)); // Convert to days
+
+    return daysDifference;
+  };
+
+
   const handleAnswerChange = (questionId: number, answer: any) => {
     setAnswers(prevAnswers => {
       const updatedAnswers = [...prevAnswers];
@@ -178,8 +192,8 @@ const QuestionnaireScreen = () => {
       return updatedAnswers;
     });
 
-    // Special case: If question ID is 10000046 and answer is "yes", show image upload questions
-    if (questionId === 10000046 && answer === 'yes') {
+    // Special case: If question ID is 10000046 and answer is "Yes", show image upload questions
+    if (questionId === 10000046 && answer === 'Yes') {
       setShowImageUploads(true);
     } else if (questionId === 10000046 && answer === 'no') {
       setShowImageUploads(false);
@@ -282,7 +296,7 @@ const QuestionnaireScreen = () => {
     const question10000046Answer = answers.find((a) => a.QuestionID === 10000046)?.answer;
 
 
-    if (imageUrisExist && question10000046Answer === 'yes') {
+    if (imageUrisExist && question10000046Answer === 'Yes') {
       const imagePromises = Object.keys(imageUris).map(async (questionId) => {
         const uri = imageUris[questionId];
         const base64Image = await createBase64FromUri(uri, questionId);
@@ -355,25 +369,54 @@ const QuestionnaireScreen = () => {
 
   const handleImageUpload = async (questionId: number) => {
     // Request media library permissions
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Permission to access media library is required.');
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+      console.log('Permission to access camera or media library is required.');
       return;
     }
 
-    // Open image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 1,
-    });
+    // Show options for Camera or Gallery
+    Alert.alert(
+      "Upload Image",
+      "Choose an option",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Choose from Gallery",
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              quality: 1,
+            });
 
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
-    } else {
-      console.log('Image picker canceled');
-    }
+            if (!result.canceled) {
+              const uri = result.assets[0].uri;
+              setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+            }
+          },
+        },
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              quality: 1,
+            });
+
+            if (!result.canceled) {
+              const uri = result.assets[0].uri;
+              setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+            }
+          },
+        },
+
+
+      ]
+    );
+
   };
 
   const renderRegularQuestions = (question: any) => {
@@ -401,6 +444,11 @@ const QuestionnaireScreen = () => {
                     />
 
                   )}
+                 
+                  {getAnswerDate(question.QuestionID) && question.QuestionID == 10000044 && (
+                    <Text> Aging: {calculateAging(getAnswerDate(question.QuestionID))} days </Text>
+                  )}
+                  <Text></Text>
                 </>
 
               )}
@@ -542,7 +590,7 @@ const QuestionnaireScreen = () => {
                     onPress={() => handleImageUpload(question.QuestionID)}
                     style={styles.uploadButton}
                   >
-                    Select Image
+                    Upload Image (Camera/Gallery)
                   </Button>
                 </View>
               )}
