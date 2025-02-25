@@ -195,7 +195,7 @@ const QuestionnaireScreen = () => {
     // Special case: If question ID is 10000046 and answer is "Yes", show image upload questions
     if (questionId === 10000046 && answer === 'Yes') {
       setShowImageUploads(true);
-    } else if (questionId === 10000046 && answer === 'no') {
+    } else if (questionId === 10000046 && answer === 'No') {
       setShowImageUploads(false);
     }
   };
@@ -314,7 +314,7 @@ const QuestionnaireScreen = () => {
     // Submit the survey data to the server using axios
     try {
       const response = await submitPreSurveyDetails(surveyData);  // Pass FormData here
-      // console.log(response)
+      console.log(response)
       if (response.data.status === "success") {
         console.log('Survey submitted successfully:', response.data);
         Toast.show({
@@ -676,13 +676,13 @@ const QuestionnaireScreen = () => {
                     <ActivityIndicator animating={true} size="large" color="#5bc0de" />
                   ) : (
                     <>
-                      <Button
+                      {/* <Button
                         mode="contained"
                         onPress={() => { router.replace('/HomeScreen'); }}
                         style={{ backgroundColor: '#FF6F61' }} // Matching background color and white text
                       >
                         Go to Home Page
-                      </Button>
+                      </Button> */}
 
 
                       <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
