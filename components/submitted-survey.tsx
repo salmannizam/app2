@@ -4,6 +4,7 @@ import { Button, List } from "react-native-paper";
 
 // Define the TypeScript interface for a survey item (adjust as needed)
 interface SurveyItem {
+  Question: string;
   AnswerID: string;
   AnswerText: string;
   DeviceID: string;
@@ -16,11 +17,19 @@ interface SurveyItem {
   SurveyID: string;
 }
 
+
+interface QuestionItem {
+  QuestionID: number;
+  Question: string;
+}
+
 interface SubmittedSurveyProps {
   modalVisible: boolean;
   setModalVisible: (visible: boolean) => void;
   data: SurveyItem[];
+  questions: QuestionItem[];
 }
+
 
 // Helper function to group data by SubResultID
 const groupDataBySubResultID = (data: SurveyItem[]) => {
@@ -33,7 +42,7 @@ const groupDataBySubResultID = (data: SurveyItem[]) => {
   }, {});
 };
 
-const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModalVisible, data }) => {
+const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModalVisible, data, questions }) => {
   // Use the SubResultID as the key for expanded accordion
   const [expandedSubResultID, setExpandedSubResultID] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -44,13 +53,32 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
       setLoading(true);
       // In a real scenario, you might call an API here.
       // Since data comes via props, we group it immediately.
-      if (data && data.length > 0) {
-        const grouped = groupDataBySubResultID(data);
+      if (data && data.length > 0 && data[0].SubResultID) {
+        const updatedData = data.map((item) => ({
+          ...item,
+          Question: getQuestionName(item.QuestionID),  // Add question name
+        }));
+
+        const grouped = groupDataBySubResultID(updatedData);
         setGroupedSurveys(grouped);
       }
       setLoading(false);
     }
-  }, [modalVisible, data]);
+  }, [modalVisible, data, questions]);
+
+  // Helper function to get question name using QuestionID
+  const getQuestionName = (questionID: number) => {
+    const questionItem = questions.find((q) => q.QuestionID === questionID);
+    return questionItem?.Question || "Unknown Question";
+  };
+
+
+  // Extract AnswerText for QuestionID 10006
+  const getAccordionHeader = (surveyItems: SurveyItem[]) => {
+    const headerItem = surveyItems.find((item) => item.QuestionID === 10000038);
+    return headerItem?.AnswerText || 'Survey Details';
+  };
+
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent>
@@ -79,7 +107,7 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
                 Object.entries(groupedSurveys).map(([subResultID, surveyItems]) => (
                   <List.Accordion
                     key={subResultID}
-                    title={`SubResultID: ${subResultID}`}
+                    title={getAccordionHeader(surveyItems)}
                     expanded={expandedSubResultID === subResultID}
                     onPress={() =>
                       setExpandedSubResultID(expandedSubResultID === subResultID ? null : subResultID)
@@ -89,14 +117,11 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
                   >
                     <View style={{ paddingHorizontal: 10, backgroundColor: '#fff', borderRadius: 5 }}>
                       <View style={{ flexDirection: 'row', padding: 8, borderRadius: 5 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 12, width: '30%', textAlign: 'center' }}>
-                          Question ID
+                        <Text style={{ fontWeight: 'bold', fontSize: 12, width: '70%', textAlign: 'center' }}>
+                          Question
                         </Text>
-                        <Text style={{ fontWeight: 'bold', fontSize: 12, width: '40%', textAlign: 'center' }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 12, width: '30%', textAlign: 'center' }}>
                           Answer
-                        </Text>
-                        <Text style={{ fontWeight: 'bold', fontSize: 12, width: '30%', textAlign: 'center' }}>
-                          Answer ID
                         </Text>
                       </View>
 
@@ -111,14 +136,11 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
                             borderBottomColor: '#ddd',
                           }}
                         >
-                          <Text style={{ fontSize: 12, width: '30%', textAlign: 'center' }}>
-                            {item.QuestionID}
+                          <Text style={{ fontSize: 12, width: '70%', textAlign: 'center' }}>
+                            {item.Question}
                           </Text>
-                          <Text style={{ fontSize: 12, width: '40%', textAlign: 'center' }}>
+                          <Text style={{ fontSize: 12, width: '30%', textAlign: 'center' }}>
                             {item.AnswerText}
-                          </Text>
-                          <Text style={{ fontSize: 12, width: '30%', textAlign: 'center' }}>
-                            {item.AnswerID}
                           </Text>
                         </View>
                       ))}
@@ -126,7 +148,7 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
                   </List.Accordion>
                 ))
               ) : (
-                <Text style={{ textAlign: 'center', padding: 10 }}>No surveys available.</Text>
+                <Text style={{ textAlign: 'center', padding: 10 }}>No surveys submitted.</Text>
               )}
             </ScrollView>
           )}

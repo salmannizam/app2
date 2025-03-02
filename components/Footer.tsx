@@ -6,7 +6,7 @@ const Footer = () => {
         <View style={styles.footer}>
             <View style={styles.iconWrapper}>
                 <TouchableOpacity style={styles.iconContainer}>
-                    <Image source={require("../assets/icon.png")} style={styles.icon} />
+                    <Image source={require("../assets/icon2.png")} style={styles.icon} />
 
                 </TouchableOpacity>
             </View>

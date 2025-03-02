@@ -1,36 +1,33 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { validateProjectId } from '../services/api';
-import { useRouter } from 'expo-router'; // ✅ Expo Router Navigation
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack } from "expo-router";
-
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons'; // ✅ Icon Library
 
 const HomeScreen: React.FC = () => {
   const [ProjectId, setProjectId] = useState('');
-  const [surveyId, setSurveyId] = useState('');
   const [projectIdValid, setProjectIdValid] = useState(true);
-  const [surveyIdValid, setSurveyIdValid] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const router = useRouter(); // ✅ Use Expo Router
+  const router = useRouter();
 
   const handleNavigate = async () => {
-    if (ProjectId && surveyId) {
+    if (ProjectId) {
       setIsLoading(true);
       try {
-        const response = await validateProjectId(ProjectId, surveyId);
-        if (response.data.status === "success") {
+        const response = await validateProjectId(ProjectId, 'na');
+        if (response.data.status === 'success') {
           router.push(`/SurveyDetailsScreen?ProjectId=${ProjectId}&surveyId=${response.data.data?.surveyId || ''}`);
-
         } else {
           setProjectIdValid(false);
           Toast.show({
             type: 'error',
             position: 'top',
-            text1: 'Invalid Product ID',
-            text2: 'Please enter a valid Product ID.',
+            text1: 'Invalid Project ID',
+            text2: 'Please enter a valid Project ID.',
             visibilityTime: 3000,
           });
         }
@@ -40,7 +37,7 @@ const HomeScreen: React.FC = () => {
           type: 'error',
           position: 'top',
           text1: 'Error',
-          text2: 'Error validating Product ID. Please try again.',
+          text2: 'Error validating Project ID. Please try again.',
           visibilityTime: 3000,
         });
       } finally {
@@ -51,52 +48,38 @@ const HomeScreen: React.FC = () => {
         type: 'error',
         position: 'top',
         text1: 'Missing Fields',
-        text2: 'Please enter both Product ID and Survey ID.',
+        text2: 'Please enter the Project ID.',
         visibilityTime: 3000,
       });
     }
   };
 
   return (
-    <>
-      <SafeAreaView style={{ flex: 1 }}>
-        <Stack.Screen options={{ title: "Home" }} />
-        <View style={styles.container}>
-          {/* Product ID Input */}
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen options={{ title: 'Home' }} />
+      <View style={styles.container}>
+        {/* Card Container */}
+        <View style={styles.card}>
+          <Text style={styles.title}>Welcome</Text>
+          <Text style={styles.subtitle}>Enter your Project ID to continue</Text>
+
+          {/* Project ID Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Project ID</Text>
+            <MaterialIcons name="business-center" size={20} color="#888" style={styles.inputIcon} />
             <TextInput
               style={[styles.input, !projectIdValid && styles.inputError]}
-              placeholder="Enter Project ID"
+              placeholder="Project ID"
               placeholderTextColor="#888"
               value={ProjectId}
-              onChangeText={text => {
+              onChangeText={(text) => {
                 setProjectId(text);
                 setProjectIdValid(true);
               }}
             />
           </View>
 
-          {/* Survey ID Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Survey ID</Text>
-            <TextInput
-              style={[styles.input, !surveyIdValid && styles.inputError]}
-              placeholder="Enter Survey ID"
-              placeholderTextColor="#888"
-              value={surveyId}
-              onChangeText={text => {
-                setSurveyId(text);
-                setSurveyIdValid(true);
-              }}
-            />
-          </View>
-
           {/* Proceed Button */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleNavigate}
-            disabled={isLoading}>
+          <TouchableOpacity style={styles.button} onPress={handleNavigate} disabled={isLoading}>
             {isLoading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
@@ -104,51 +87,77 @@ const HomeScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </>
+      </View>
+    </SafeAreaView>
   );
-
-
 };
 
+// Styles
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F0F4F8',
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+    backgroundColor: '#F0F4F8',
   },
-  inputContainer: {
-    width: '80%',
-    marginBottom: 20,
+  card: {
+    width: '90%',
+    backgroundColor: '#f1f3f5',
+    borderRadius: 12,
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    alignItems: 'center',
   },
-  inputLabel: {
-    fontSize: 16,
+  title: {
+    fontSize: 24,
     fontWeight: '600',
-    color: '#333333',
+    color: '#333',
     marginBottom: 5,
   },
-  input: {
-    height: 50,
+  subtitle: {
+    fontSize: 14,
+    color: '#777',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: 10,
-    paddingLeft: 16,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    backgroundColor: '#f9f9f9',
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    height: 50,
     fontSize: 16,
-    backgroundColor: '#fff',
+    color: '#333',
   },
   inputError: {
     borderColor: '#E74C3C',
   },
   button: {
-    width: '80%',
+    width: '100%',
     height: 50,
-    borderRadius: 25,
+    borderRadius: 8,
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 10,
     elevation: 2,
-    marginTop: 30,
   },
   buttonText: {
     color: '#FFFFFF',

@@ -685,7 +685,7 @@ const QuestionnaireScreen = () => {
           )}
 
         </View>
-        <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys}/>
+        <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys} questions={questions}/>
       </SafeAreaView>
     </>
 
