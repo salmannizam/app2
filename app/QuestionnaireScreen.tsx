@@ -9,13 +9,13 @@ import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import * as FileSystem from 'expo-file-system';
 import { Dialog, Portal } from 'react-native-paper';
-import { getSurveyQuestions, submitPreSurveyDetails } from '../services/api';
+import { getSubmittedSurveys, getSurveyQuestions, submitPreSurveyDetails } from '../services/api';
 import { getCurrentDateTime } from '../services/dateUtils';
 import { useLocalSearchParams } from 'expo-router';  // ✅ Expo Router
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from 'expo-router';
+import SubmittedSurvey from '@/components/submitted-survey';
 
 interface Answer {
   QuestionID: number;
@@ -36,9 +36,7 @@ const QuestionnaireScreen = () => {
   const [showImageUploads, setShowImageUploads] = useState(false); // Track whether to show image upload questions
   const [completedSurveys, setCompletedSurveys] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false); // For Submit button loading
-
-
-  const [openAccordionSurveys, setOpenAccordionSurveys] = useState<number | null>(null);  // For Completed Surveys
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
 
@@ -57,7 +55,6 @@ const QuestionnaireScreen = () => {
   const StartDate = params.StartDate?.toString() ?? "";
   const StartTime = params.StartTime?.toString() ?? "";
 
-  const router = useRouter(); // ✅ Use Expo Router
 
   useEffect(() => {
     setLoading(true)
@@ -96,7 +93,7 @@ const QuestionnaireScreen = () => {
 
     // Call the function to fetch questions
     getQuestion();
-
+    getSubmittedSurvey(ProjectId, outletName)
     // const questionsData = require('../assets/questions.json');
 
     // // Sorting questions by QuestionID in ascending order
@@ -105,6 +102,32 @@ const QuestionnaireScreen = () => {
     // setQuestions(sortedQuestions);
 
   }, [SurveyID]); // Dependency array ensures it runs when SurveyID changes
+
+
+  async function getSubmittedSurvey(ProjectId: string, outletName: string) {
+    try {
+      const response = await getSubmittedSurveys(ProjectId, outletName);
+      if (response.data.status === "success") {
+        setCompletedSurveys(response?.data?.data);
+        // console.log("submittedd",response.data.data)
+      } else {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Unable to get submitted surveys',
+          visibilityTime: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching submitted survey:', error);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Error fetching submitted surveys',
+        visibilityTime: 3000,
+      });
+    }
+  }
 
   const getPersistentDeviceId = async () => {
     let deviceId = await SecureStore.getItemAsync('deviceId');
@@ -329,7 +352,7 @@ const QuestionnaireScreen = () => {
         setImageUris({}); // Clear the image URIs
         setShowImageUploads(false);  // Hide image upload questions
         setOpenAccordion({});  // Reset accordion state
-
+        getSubmittedSurvey(ProjectId, outletName)
       } else {
 
         console.error('Error submitting survey:', response.data.message);
@@ -444,7 +467,7 @@ const QuestionnaireScreen = () => {
                     />
 
                   )}
-                 
+
                   {getAnswerDate(question.QuestionID) && question.QuestionID == 10000044 && (
                     <Text> Aging: {calculateAging(getAnswerDate(question.QuestionID))} days </Text>
                   )}
@@ -601,42 +624,6 @@ const QuestionnaireScreen = () => {
     );
   };
 
-  const toggleAccordion = (surveyIndex: number) => {
-    setOpenAccordionSurveys(prevState => prevState === surveyIndex ? null : surveyIndex);
-  };
-
-  const renderCompletedSurvey = (survey: Survey, surveyIndex: number) => {
-    // console.log("survey", survey)
-    // Ensure survey is typed correctly
-    return (
-      <View style={styles.accordionContainer} key={surveyIndex}>
-        <TouchableOpacity onPress={() => toggleAccordion(surveyIndex)} style={styles.accordionButton}>
-          <Text style={styles.accordionButtonLabel}>Survey {surveyIndex + 1}</Text>
-        </TouchableOpacity>
-
-        <Collapsible collapsed={openAccordionSurveys !== surveyIndex}>
-          <View style={styles.tableContainer}>
-            {/* Table Header */}
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Question</Text>
-              <Text style={styles.tableCell}>Answer</Text>
-            </View>
-
-            {/* Table Rows: Loop over answers */}
-            {survey.answers.map((answer: Answer) => {
-              const question = questions.find((q) => q.QuestionID === answer.QuestionID);
-              return (
-                <View key={answer.QuestionID} style={styles.tableRow}>
-                  <Text style={styles.tableCell}>{question?.Question || 'N/A'}</Text>
-                  <Text style={styles.tableCell}>{answer.answer || 'N/A'}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </Collapsible>
-      </View>
-    );
-  };
 
 
   // Separate image-upload and regular questions
@@ -676,13 +663,13 @@ const QuestionnaireScreen = () => {
                     <ActivityIndicator animating={true} size="large" color="#5bc0de" />
                   ) : (
                     <>
-                      {/* <Button
+                      <Button
                         mode="contained"
-                        onPress={() => { router.replace('/HomeScreen'); }}
-                        style={{ backgroundColor: '#FF6F61' }} // Matching background color and white text
+                        onPress={() => { setModalVisible(true); }}
+                        style={{ backgroundColor: '#92850c' }} // Matching background color and white text
                       >
-                        Go to Home Page
-                      </Button> */}
+                        Submitted Survey
+                      </Button>
 
 
                       <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
@@ -696,15 +683,9 @@ const QuestionnaireScreen = () => {
               }
             />
           )}
-          {/* Completed Surveys Accordion */}
-          {!loading && completedSurveys.length > 0 && (
-            <View style={styles.completedSurveysContainer}>
-              <Text style={styles.completedSurveysTitle}>Added Surveys</Text>
-              {completedSurveys.map((survey, index) => renderCompletedSurvey(survey[0], index))}  {/* Accessing survey[0] */}
-            </View>
-          )}
 
         </View>
+        <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys}/>
       </SafeAreaView>
     </>
 
@@ -806,51 +787,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     backgroundColor: '#4CAF50',
   },
-  completedSurveysContainer: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-
-  completedSurveysTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-    textAlign: 'center',
-  },
-
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingVertical: 8,
-  },
-
-  tableCell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-    borderRightWidth: 1,
-    borderRightColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  tableContainer: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 5,
-  },
-  tableCellLast: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-    backgroundColor: '#fff',
-  },
-
   iconButton: {
     position: 'absolute', // Make sure the icon is absolutely positioned
     padding: 15,

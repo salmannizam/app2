@@ -4,6 +4,8 @@ import axios, { AxiosResponse } from 'axios';
 // Define your base URL for the API
 const api = axios.create({
   baseURL: 'https://sctrackerapi.azurewebsites.net', // your base URL
+  // baseURL: 'http://192.168.1.2:3000', // your base URL
+
   // baseURL: 'http://77.37.45.105:4004', // your base URL
   timeout: 5000, // set a timeout if necessary
 });
@@ -80,6 +82,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log("error", error)
     let errorMessage = "Something went wrong. Please try again.";
 
     if (error.response) {
@@ -110,11 +113,16 @@ export const getResultId = (ProjectId: string, surveyId: string, outletName: str
 
 
 export const getSurveyQuestions = (surveyId: string): Promise<AxiosResponse<ApiResponse>> => {
-  console.log("surveyId",surveyId)
+  console.log("surveyId", surveyId)
   return api.get(`/survey/get-questions/${surveyId}`);
 
   // return api.get(`/survey/get-questions/s20250216154732`);
 };
+
+export const getSubmittedSurveys = (ProjectId: string, outletname: string): Promise<AxiosResponse<ApiResponse>> => {
+  return api.get(`/survey/get-submitted-project/${ProjectId}/${outletname}`);
+};
+
 
 export const submitPreSurveyDetails = (surveyData: SubmitSurvey): Promise<AxiosResponse<ApiResponse>> => {
   return api.post('/survey/submit-survey', surveyData, {
