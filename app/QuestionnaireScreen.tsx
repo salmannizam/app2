@@ -244,24 +244,24 @@ const QuestionnaireScreen = () => {
     }
 
     // Get only date-type mandatory questions
-    const mandatoryDateQuestions = mandatoryQuestions.filter(q => q.Datatype === "Date");
+    // const mandatoryDateQuestions = mandatoryQuestions.filter(q => q.Datatype === "Date");
 
-    const invalidDateAnswer = answers.some(a =>
-      mandatoryDateQuestions.some(q => q.QuestionID === a.QuestionID) &&
-      !/^\d{8}$/.test(a.answer) // Ensure YYYYMMDD format
-    );
+    // const invalidDateAnswer = answers.some(a =>
+    //   mandatoryDateQuestions.some(q => q.QuestionID === a.QuestionID) &&
+    //   !/^\d{8}$/.test(a.answer) // Ensure YYYYMMDD format
+    // );
 
-    if (invalidDateAnswer) {
-      Toast.show({
-        type: "error",
-        position: "top",
-        text1: "Invalid Date Format",
-        text2: "Please enter a valid date in YYYYMMDD format.",
-        visibilityTime: 3000,
-      });
-      setSubmitting(false);
-      return;
-    }
+    // if (invalidDateAnswer) {
+    //   Toast.show({
+    //     type: "error",
+    //     position: "top",
+    //     text1: "Invalid Date Format",
+    //     text2: "Please enter a valid date in YYYYMMDD format.",
+    //     visibilityTime: 3000,
+    //   });
+    //   setSubmitting(false);
+    //   return;
+    // }
 
     const { FullDateTime, date, time } = getCurrentDateTime();
     const deviceId = await getPersistentDeviceId();
