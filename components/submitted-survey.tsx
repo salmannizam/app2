@@ -75,7 +75,7 @@ const SubmittedSurvey: React.FC<SubmittedSurveyProps> = ({ modalVisible, setModa
 
   // Extract AnswerText for QuestionID 10006
   const getAccordionHeader = (surveyItems: SurveyItem[]) => {
-    const headerItem = surveyItems.find((item) => item.QuestionID === 10000038);
+    const headerItem = surveyItems.find((item) => item.QuestionID === 10000049);
     return headerItem?.AnswerText || 'Survey Details';
   };
 

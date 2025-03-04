@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { Button, Card, TextInput, Snackbar } from 'react-native-paper';
 import * as ImagePicker from "expo-image-picker";
 import Toast from 'react-native-toast-message';
@@ -215,10 +215,10 @@ const QuestionnaireScreen = () => {
       return updatedAnswers;
     });
 
-    // Special case: If question ID is 10000046 and answer is "Yes", show image upload questions
-    if (questionId === 10000046 && answer === 'Yes') {
+    // Special case: If question ID is 10000057 and answer is "Yes", show image upload questions
+    if (questionId === 10000057 && answer === 'Yes') {
       setShowImageUploads(true);
-    } else if (questionId === 10000046 && answer === 'No') {
+    } else if (questionId === 10000057 && answer === 'No') {
       setShowImageUploads(false);
     }
   };
@@ -316,10 +316,10 @@ const QuestionnaireScreen = () => {
     // Collect images
     const allImages: any = {};
     const imageUrisExist = Object.keys(imageUris).length > 0;
-    const question10000046Answer = answers.find((a) => a.QuestionID === 10000046)?.answer;
+    const question10000057Answer = answers.find((a) => a.QuestionID === 10000057)?.answer;
 
 
-    if (imageUrisExist && question10000046Answer === 'Yes') {
+    if (imageUrisExist && question10000057Answer === 'Yes') {
       const imagePromises = Object.keys(imageUris).map(async (questionId) => {
         const uri = imageUris[questionId];
         const base64Image = await createBase64FromUri(uri, questionId);
@@ -468,7 +468,7 @@ const QuestionnaireScreen = () => {
 
                   )}
 
-                  {getAnswerDate(question.QuestionID) && question.QuestionID == 10000044 && (
+                  {getAnswerDate(question.QuestionID) && question.QuestionID == 10000055 && (
                     <Text> Aging: {calculateAging(getAnswerDate(question.QuestionID))} days </Text>
                   )}
                   <Text></Text>
@@ -515,19 +515,21 @@ const QuestionnaireScreen = () => {
               <Portal>
                 <Dialog visible={openDropdown === question.QuestionID} onDismiss={() => setOpenDropdown(null)}>
                   <Dialog.Title>Select an Option</Dialog.Title>
-                  <Dialog.Content>
-                    {question.Choices.map((choice: { ChoiceID: any; ChoiceText: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; }, index: any) => (
-                      <TouchableOpacity
-                        key={`choice-${choice.ChoiceID || index}`}  // Unique key for each choice
-                        style={styles.modalItem}
-                        onPress={() => {
-                          handleAnswerChange(question.QuestionID, choice.ChoiceText);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <Text style={styles.modalItemText}>{choice.ChoiceText}</Text>
-                      </TouchableOpacity>
-                    ))}
+                  <Dialog.Content style={{ maxHeight: 300 }}>
+                    <ScrollView>
+                      {question.Choices.map((choice: { ChoiceID: any; ChoiceText: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; }, index: any) => (
+                        <TouchableOpacity
+                          key={`choice-${choice.ChoiceID || index}`}  // Unique key for each choice
+                          style={styles.modalItem}
+                          onPress={() => {
+                            handleAnswerChange(question.QuestionID, choice.ChoiceText);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          <Text style={styles.modalItemText}>{choice.ChoiceText}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </Dialog.Content>
                   <Dialog.Actions>
                     <Button onPress={() => setOpenDropdown(null)}>Cancel</Button>
@@ -685,7 +687,7 @@ const QuestionnaireScreen = () => {
           )}
 
         </View>
-        <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys} questions={questions}/>
+        <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys} questions={questions} />
       </SafeAreaView>
     </>
 
