@@ -16,6 +16,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SubmittedSurvey from '@/components/submitted-survey';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 interface Answer {
   QuestionID: number;
@@ -337,9 +338,9 @@ const QuestionnaireScreen = () => {
     // Submit the survey data to the server using axios
     try {
       const response = await submitPreSurveyDetails(surveyData);  // Pass FormData here
-      console.log(response)
+      // console.log(response)
       if (response.data.status === "success") {
-        console.log('Survey submitted successfully:', response.data);
+        // console.log('Survey submitted successfully:', response.data);
         Toast.show({
           type: 'success',
           position: 'top',
@@ -416,8 +417,44 @@ const QuestionnaireScreen = () => {
             });
 
             if (!result.canceled) {
-              const uri = result.assets[0].uri;
-              setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+              let uri = result.assets[0].uri;
+          
+              // Get file info
+              const info = await FileSystem.getInfoAsync(uri);
+              if (info.exists && info.size) {
+                let fileSizeInKB = info.size / 1024;
+                // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
+          
+                // 👉 Compress if size > 500 KB
+                if (fileSizeInKB > 500) {
+                  console.log("Compressing to around 500 KB...");
+                  let compressQuality = 0.7;  // Start with 70% quality
+          
+                  // Iteratively compress to reach ~500 KB
+                  while (fileSizeInKB > 500 && compressQuality > 0.1) {
+                    const compressedImage = await ImageManipulator.manipulateAsync(
+                      uri,
+                      [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
+                      { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
+                    );
+          
+                    uri = compressedImage.uri;
+                    const compressedInfo = await FileSystem.getInfoAsync(uri);
+                    if (compressedInfo.exists && compressedInfo.size) {
+                      fileSizeInKB = compressedInfo.size / 1024;
+                      console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
+                    }
+          
+                    compressQuality -= 0.1;  // Reduce quality by 10% each step
+                  }
+                } else {
+                  console.log("Size is already under 500 KB, no compression needed.");
+                }
+          
+                setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+              } else {
+                console.log("Failed to get file info.");
+              }
             }
           },
         },
@@ -430,8 +467,44 @@ const QuestionnaireScreen = () => {
             });
 
             if (!result.canceled) {
-              const uri = result.assets[0].uri;
-              setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+              let uri = result.assets[0].uri;
+          
+              // Get file info
+              const info = await FileSystem.getInfoAsync(uri);
+              if (info.exists && info.size) {
+                let fileSizeInKB = info.size / 1024;
+                console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
+          
+                // 👉 Compress if size > 500 KB
+                if (fileSizeInKB > 500) {
+                  console.log("Compressing to around 500 KB...");
+                  let compressQuality = 0.7;  // Start with 70% quality
+          
+                  // Iteratively compress to reach ~500 KB
+                  while (fileSizeInKB > 500 && compressQuality > 0.1) {
+                    const compressedImage = await ImageManipulator.manipulateAsync(
+                      uri,
+                      [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
+                      { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
+                    );
+          
+                    uri = compressedImage.uri;
+                    const compressedInfo = await FileSystem.getInfoAsync(uri);
+                    if (compressedInfo.exists && compressedInfo.size) {
+                      fileSizeInKB = compressedInfo.size / 1024;
+                      console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
+                    }
+          
+                    compressQuality -= 0.1;  // Reduce quality by 10% each step
+                  }
+                } else {
+                  console.log("Size is already under 500 KB, no compression needed.");
+                }
+          
+                setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+              } else {
+                console.log("Failed to get file info.");
+              }
             }
           },
         },
