@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Button, Card, TextInput, Snackbar } from 'react-native-paper';
+import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
+import { Button, Card, TextInput, Snackbar, IconButton } from 'react-native-paper';
 import * as ImagePicker from "expo-image-picker";
 import Toast from 'react-native-toast-message';
 import Collapsible from 'react-native-collapsible'; // Add this import for collapsible functionality
@@ -39,6 +39,8 @@ const QuestionnaireScreen = () => {
   const [submitting, setSubmitting] = useState(false); // For Submit button loading
   const [modalVisible, setModalVisible] = useState(false);
 
+  const [imageprevModalVisible, setImageprevModalVisible] = useState(false);
+  const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
 
   const params = useLocalSearchParams();
@@ -418,18 +420,18 @@ const QuestionnaireScreen = () => {
 
             if (!result.canceled) {
               let uri = result.assets[0].uri;
-          
+
               // Get file info
               const info = await FileSystem.getInfoAsync(uri);
               if (info.exists && info.size) {
                 let fileSizeInKB = info.size / 1024;
                 // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-          
+
                 // 👉 Compress if size > 500 KB
                 if (fileSizeInKB > 500) {
                   console.log("Compressing to around 500 KB...");
                   let compressQuality = 0.7;  // Start with 70% quality
-          
+
                   // Iteratively compress to reach ~500 KB
                   while (fileSizeInKB > 500 && compressQuality > 0.1) {
                     const compressedImage = await ImageManipulator.manipulateAsync(
@@ -437,20 +439,20 @@ const QuestionnaireScreen = () => {
                       [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
                       { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
                     );
-          
+
                     uri = compressedImage.uri;
                     const compressedInfo = await FileSystem.getInfoAsync(uri);
                     if (compressedInfo.exists && compressedInfo.size) {
                       fileSizeInKB = compressedInfo.size / 1024;
                       console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
                     }
-          
+
                     compressQuality -= 0.1;  // Reduce quality by 10% each step
                   }
                 } else {
                   console.log("Size is already under 500 KB, no compression needed.");
                 }
-          
+
                 setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
               } else {
                 console.log("Failed to get file info.");
@@ -468,18 +470,18 @@ const QuestionnaireScreen = () => {
 
             if (!result.canceled) {
               let uri = result.assets[0].uri;
-          
+
               // Get file info
               const info = await FileSystem.getInfoAsync(uri);
               if (info.exists && info.size) {
                 let fileSizeInKB = info.size / 1024;
                 console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-          
+
                 // 👉 Compress if size > 500 KB
                 if (fileSizeInKB > 500) {
                   console.log("Compressing to around 500 KB...");
                   let compressQuality = 0.7;  // Start with 70% quality
-          
+
                   // Iteratively compress to reach ~500 KB
                   while (fileSizeInKB > 500 && compressQuality > 0.1) {
                     const compressedImage = await ImageManipulator.manipulateAsync(
@@ -487,20 +489,20 @@ const QuestionnaireScreen = () => {
                       [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
                       { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
                     );
-          
+
                     uri = compressedImage.uri;
                     const compressedInfo = await FileSystem.getInfoAsync(uri);
                     if (compressedInfo.exists && compressedInfo.size) {
                       fileSizeInKB = compressedInfo.size / 1024;
                       console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
                     }
-          
+
                     compressQuality -= 0.1;  // Reduce quality by 10% each step
                   }
                 } else {
                   console.log("Size is already under 500 KB, no compression needed.");
                 }
-          
+
                 setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
               } else {
                 console.log("Failed to get file info.");
@@ -671,30 +673,93 @@ const QuestionnaireScreen = () => {
               </Button>
               {openAccordion[question.QuestionID] && (
                 <View style={styles.imageContainer}>
-                  <Text style={styles.imageText}>Upload Image</Text>
+                  {/* <Text style={styles.imageText}>Upload Image</Text> */}
                   {imageUris[question.QuestionID] ? (
-                    <Image
-                      source={{ uri: imageUris[question.QuestionID] || undefined }}
-                      style={styles.imagePreview}
-                    />
+                    <View style={styles.imagePreviewContainer}>
+                      <Image
+                        source={{ uri: imageUris[question.QuestionID] || undefined }}
+                        style={styles.imagePreview}
+                      />
+
+                      {/* 👁️ View Button to Open Modal */}
+                      <IconButton
+                        icon="eye"
+                        iconColor="#3498db"  // 🔄 Soft blue for professional look
+                        onPress={() => {
+                          setSelectedPrevImage(imageUris[question.QuestionID]);
+                          setImageprevModalVisible(true);
+                        }}
+                        style={[styles.viewButton, styles.previewButton]}  // Added new style
+                      />
+
+                      {/* 🗑️ Cancel Button to Remove Image */}
+                      <Button
+                        mode="text"
+                        icon="close-circle"
+                        onPress={() => {
+                          const updatedImageUris = { ...imageUris };
+                          delete updatedImageUris[question.QuestionID];
+                          setImageUris(updatedImageUris);  // 🟢 Remove image from state
+                        }}
+                        style={styles.removeButton}
+                        labelStyle={{ color: 'red' }}
+                      >
+                        Remove Image
+                      </Button>
+                    </View>
+
                   ) : (
-                    <Text style={styles.imageText}>No image selected</Text>
+                    <>
+                      <Text style={styles.imageText}>No image selected</Text>
+                      <Button
+                        key={`upload-${question.QuestionID}`} // Unique key here
+                        icon="camera"
+                        mode="contained"
+                        onPress={() => handleImageUpload(question.QuestionID)}
+                        style={styles.uploadButton}
+                      >
+                        Upload Image (Camera/Gallery)
+                      </Button>
+                    </>
+
                   )}
 
-                  <Button
-                    key={`upload-${question.QuestionID}`} // Unique key here
-                    icon="camera"
-                    mode="contained"
-                    onPress={() => handleImageUpload(question.QuestionID)}
-                    style={styles.uploadButton}
-                  >
-                    Upload Image (Camera/Gallery)
-                  </Button>
+
                 </View>
               )}
             </View>
           )}
         </Card.Content>
+
+        {/* 🌟 Professional Modal for Image Preview */}
+        <Modal
+  visible={imageprevModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setImageprevModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      {/* 🖼️ Full Image Inside Modal with Contain */}
+      <Image
+        source={{ uri: selectedPrevImage || undefined }}
+        style={styles.modalImage}
+        resizeMode="contain"
+      />
+
+      {/* ❌ Close Button */}
+      <IconButton
+        icon="close"
+        iconColor="#fff"
+        size={24}
+        onPress={() => setImageprevModalVisible(false)}
+        style={styles.closeIconButton}
+      />
+    </View>
+  </View>
+</Modal>
+
+
       </Card>
     );
   };
@@ -882,6 +947,92 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  imagePreviewContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  removeButton: {
+    marginTop: 5,
+    alignSelf: 'center',
+  },
+
+  viewButton: {
+    position: 'absolute',
+    top: 5,
+    right: 50,
+    zIndex: 1,
+  },
+
+  modalScrollView: {
+    alignItems: 'center',
+  },
+
+  closeButton: {
+    backgroundColor: '#FF6F61',
+    marginVertical: 5,
+  },
+  previewButton: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  
+  modalCard: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    margin: 20,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  
+  fullscreenImage: {
+    width: '100%',
+    height: '100%',  // 🔄 Fill the modal
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',  // 🔄 Darker overlay for focus
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  modalContainer: {
+    width: '89%',        // 🔄 89% Width
+    height: '70%',       // 🔄 70% Height
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  modalImage: {
+    width: '100%',
+    height: '100%',       // 🔄 Fit image fully inside modal
+    borderRadius: 10,
+  },
+  
+  closeIconButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',  // 🔄 Semi-transparent background
+    borderRadius: 20,
+  },
+  
 });
 
 
