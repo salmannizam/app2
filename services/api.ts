@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios';
 
 // Define your base URL for the API
 const api = axios.create({
-  baseURL: 'https://sctrackerapi.azurewebsites.net', // your base URL
+  baseURL: 'https://dsurvey.azurewebsites.net', // your base URL
   // baseURL: 'http://192.168.1.2:3000', // your base URL
 
   // baseURL: 'http://77.37.45.105:4004', // your base URL
