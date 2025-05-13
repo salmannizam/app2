@@ -351,11 +351,11 @@ const QuestionnaireScreen = () => {
           visibilityTime: 3000,
         });
 
-        // setAnswers([]);  // Clear the answers array
-        // setImageUris({}); // Clear the image URIs
-        // setShowImageUploads(false);  // Hide image upload questions
-        // setOpenAccordion({});  // Reset accordion state
-        // getSubmittedSurvey(ProjectId, outletName)
+        setAnswers([]);  // Clear the answers array
+        setImageUris({}); // Clear the image URIs
+        setShowImageUploads(false);  // Hide image upload questions
+        setOpenAccordion({});  // Reset accordion state
+        getSubmittedSurvey(ProjectId, outletName)
       } else {
 
         console.error('Error submitting survey:', response.data.message);
