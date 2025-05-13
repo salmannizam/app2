@@ -351,11 +351,11 @@ const QuestionnaireScreen = () => {
           visibilityTime: 3000,
         });
 
-        setAnswers([]);  // Clear the answers array
-        setImageUris({}); // Clear the image URIs
-        setShowImageUploads(false);  // Hide image upload questions
-        setOpenAccordion({});  // Reset accordion state
-        getSubmittedSurvey(ProjectId, outletName)
+        // setAnswers([]);  // Clear the answers array
+        // setImageUris({}); // Clear the image URIs
+        // setShowImageUploads(false);  // Hide image upload questions
+        // setOpenAccordion({});  // Reset accordion state
+        // getSubmittedSurvey(ProjectId, outletName)
       } else {
 
         console.error('Error submitting survey:', response.data.message);
@@ -428,12 +428,12 @@ const QuestionnaireScreen = () => {
                 // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
 
                 // 👉 Compress if size > 500 KB
-                if (fileSizeInKB > 500) {
+                if (fileSizeInKB > 300) {
                   console.log("Compressing to around 500 KB...");
                   let compressQuality = 0.7;  // Start with 70% quality
 
                   // Iteratively compress to reach ~500 KB
-                  while (fileSizeInKB > 500 && compressQuality > 0.1) {
+                  while (fileSizeInKB > 300 && compressQuality > 0.1) {
                     const compressedImage = await ImageManipulator.manipulateAsync(
                       uri,
                       [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
@@ -450,7 +450,7 @@ const QuestionnaireScreen = () => {
                     compressQuality -= 0.1;  // Reduce quality by 10% each step
                   }
                 } else {
-                  console.log("Size is already under 500 KB, no compression needed.");
+                  console.log("Size is already under 300 KB, no compression needed.");
                 }
 
                 setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
@@ -803,13 +803,13 @@ const QuestionnaireScreen = () => {
                     <ActivityIndicator animating={true} size="large" color="#5bc0de" />
                   ) : (
                     <>
-                      <Button
+                      {/* <Button
                         mode="contained"
                         onPress={() => { setModalVisible(true); }}
                         style={{ backgroundColor: '#92850c' }} // Matching background color and white text
                       >
                         Submitted Survey
-                      </Button>
+                      </Button> */}
 
 
                       <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
