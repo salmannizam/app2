@@ -118,6 +118,9 @@ rm -rf node_modules package-lock.json
 npm uninstall react-native-reanimated
 npm install react-native-reanimated
 
+<!--
+  -->
+
 npm install
 
 npm start -- --reset-cache
