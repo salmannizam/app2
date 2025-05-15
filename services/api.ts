@@ -7,7 +7,7 @@ const api = axios.create({
   // baseURL: 'http://192.168.1.2:3000', // your base URL
 
   // baseURL: 'http://77.37.45.105:4004', // your base URL
-  timeout: 5000, // set a timeout if necessary
+  timeout: 120000, // 2 minutes
 });
 
 // Define types for request data and responses
