@@ -17,6 +17,8 @@ import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SubmittedSurvey from '@/components/submitted-survey';
 import * as ImageManipulator from 'expo-image-manipulator';
+import ContinueSurveyModal from '@/components/ContinueSurveyModal';
+import { useRouter } from 'expo-router';
 
 interface Answer {
   QuestionID: number;
@@ -38,13 +40,17 @@ const QuestionnaireScreen = () => {
   const [completedSurveys, setCompletedSurveys] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false); // For Submit button loading
   const [modalVisible, setModalVisible] = useState(false);
+  const [showContinueModal, setShowContinueModal] = useState(false);
+  const [continueSurey, setContinueSurey] = useState(true); // default to 'yes'
+  const [remarks, setRemarks] = useState<{ [key: string]: string }>({});
+  const [defects, setDefects] = useState<{ [key: string]: string }>({});
 
   const [imageprevModalVisible, setImageprevModalVisible] = useState(false);
   const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
 
+  const router = useRouter();
   const params = useLocalSearchParams();
-  // const { ProjectId, outletName, SurveyID, ResultID, Location, Address, Zone, country, state, StartDate, StartTime } = params;
 
   const ProjectId = params.ProjectId?.toString() ?? "";
   const outletName = params.outletName?.toString() ?? "";
@@ -83,7 +89,7 @@ const QuestionnaireScreen = () => {
           });
         }
       } catch (error) {
-        console.error('Error fetching survey questions:', error);
+        // console.error('Error fetching survey questions:', error);
         // Show a generic error toast if something goes wrong with the request
         Toast.show({
           type: 'error',
@@ -122,7 +128,7 @@ const QuestionnaireScreen = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching submitted survey:', error);
+      // console.error('Error fetching submitted survey:', error);
       Toast.show({
         type: 'error',
         position: 'top',
@@ -160,7 +166,7 @@ const QuestionnaireScreen = () => {
 
       return base64String;
     } catch (error) {
-      console.error("Error converting URI to Base64:", error);
+      // console.error("Error converting URI to Base64:", error);
       return null;
     }
   };
@@ -226,7 +232,7 @@ const QuestionnaireScreen = () => {
     }
   };
 
-  const handleSubmitSurvey = async () => {
+  const handleSubmitSurvey = async (value: 'yes' | 'no') => {
     setSubmitting(true);
     const mandatoryQuestions = questions.filter(q => q.Mandatory === "Yes");
 
@@ -268,7 +274,7 @@ const QuestionnaireScreen = () => {
 
     const { FullDateTime, date, time } = getCurrentDateTime();
     const deviceId = await getPersistentDeviceId();
-    console.log("Device ID:", deviceId);  // This will now correctly log the device ID
+    // console.log("Device ID:", deviceId);  // This will now correctly log the device ID
 
     const formattedSurvey = answers.map((answer) => {
       // Find the corresponding question by QuestionID
@@ -356,9 +362,15 @@ const QuestionnaireScreen = () => {
         setShowImageUploads(false);  // Hide image upload questions
         setOpenAccordion({});  // Reset accordion state
         getSubmittedSurvey(ProjectId, outletName)
+
+        if (value === 'no') {
+          // router.replace('/HomeScreen');
+          router.back()
+        }
+
       } else {
 
-        console.error('Error submitting survey:', response.data.message);
+        // console.error('Error submitting survey:', response.data.message);
         Toast.show({
           type: 'error',
           position: 'top',
@@ -390,6 +402,7 @@ const QuestionnaireScreen = () => {
 
     } finally {
       setSubmitting(false);
+      setShowContinueModal(false)
     }
   };
 
@@ -420,43 +433,7 @@ const QuestionnaireScreen = () => {
 
             if (!result.canceled) {
               let uri = result.assets[0].uri;
-
-              // Get file info
-              const info = await FileSystem.getInfoAsync(uri);
-              if (info.exists && info.size) {
-                let fileSizeInKB = info.size / 1024;
-                // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-
-                // 👉 Compress if size > 500 KB
-                if (fileSizeInKB > 300) {
-                  console.log("Compressing to around 500 KB...");
-                  let compressQuality = 0.7;  // Start with 70% quality
-
-                  // Iteratively compress to reach ~500 KB
-                  while (fileSizeInKB > 300 && compressQuality > 0.1) {
-                    const compressedImage = await ImageManipulator.manipulateAsync(
-                      uri,
-                      [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
-                      { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
-                    );
-
-                    uri = compressedImage.uri;
-                    const compressedInfo = await FileSystem.getInfoAsync(uri);
-                    if (compressedInfo.exists && compressedInfo.size) {
-                      fileSizeInKB = compressedInfo.size / 1024;
-                      console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
-                    }
-
-                    compressQuality -= 0.1;  // Reduce quality by 10% each step
-                  }
-                } else {
-                  console.log("Size is already under 300 KB, no compression needed.");
-                }
-
-                setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
-              } else {
-                console.log("Failed to get file info.");
-              }
+              await processImage(uri, questionId);
             }
           },
         },
@@ -470,52 +447,179 @@ const QuestionnaireScreen = () => {
 
             if (!result.canceled) {
               let uri = result.assets[0].uri;
-
-              // Get file info
-              const info = await FileSystem.getInfoAsync(uri);
-              if (info.exists && info.size) {
-                let fileSizeInKB = info.size / 1024;
-                console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-
-                // 👉 Compress if size > 500 KB
-                if (fileSizeInKB > 500) {
-                  console.log("Compressing to around 500 KB...");
-                  let compressQuality = 0.7;  // Start with 70% quality
-
-                  // Iteratively compress to reach ~500 KB
-                  while (fileSizeInKB > 500 && compressQuality > 0.1) {
-                    const compressedImage = await ImageManipulator.manipulateAsync(
-                      uri,
-                      [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
-                      { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
-                    );
-
-                    uri = compressedImage.uri;
-                    const compressedInfo = await FileSystem.getInfoAsync(uri);
-                    if (compressedInfo.exists && compressedInfo.size) {
-                      fileSizeInKB = compressedInfo.size / 1024;
-                      console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
-                    }
-
-                    compressQuality -= 0.1;  // Reduce quality by 10% each step
-                  }
-                } else {
-                  console.log("Size is already under 500 KB, no compression needed.");
-                }
-
-                setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
-              } else {
-                console.log("Failed to get file info.");
-              }
+              await processImage(uri, questionId);
             }
           },
         },
-
-
       ]
     );
-
   };
+
+  // Function to process the image (compress and save it)
+  const processImage = async (uri: string, questionId: number) => {
+    // Get file info
+    const info = await FileSystem.getInfoAsync(uri);
+    if (info.exists && info.size) {
+      let fileSizeInKB = info.size / 1024;
+      // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
+
+      // 👉 Compress if size > 100 KB
+      if (fileSizeInKB > 100) {
+        // console.log("Compressing to around 100 KB...");
+        let compressQuality = 0.7;  // Start with 70% quality
+
+        // Iteratively compress to reach ~100 KB
+        while (fileSizeInKB > 100 && compressQuality > 0.1) {
+          const compressedImage = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
+            { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
+          );
+
+          uri = compressedImage.uri;
+          const compressedInfo = await FileSystem.getInfoAsync(uri);
+          if (compressedInfo.exists && compressedInfo.size) {
+            fileSizeInKB = compressedInfo.size / 1024;
+            // console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
+          }
+
+          compressQuality -= 0.1;  // Reduce quality by 10% each step
+        }
+      } else {
+        // console.log("Size is already under 100 KB, no compression needed.");
+      }
+
+      // Update the state with the final URI
+      setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+    } else {
+      // console.log("Failed to get file info.");
+    }
+  };
+
+
+  // const handleImageUpload = async (questionId: number) => {
+  //   // Request media library permissions
+  //   const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+  //   const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  //   if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+  //     console.log('Permission to access camera or media library is required.');
+  //     return;
+  //   }
+
+  //   // Show options for Camera or Gallery
+  //   Alert.alert(
+  //     "Upload Image",
+  //     "Choose an option",
+  //     [
+  //       { text: "Cancel", style: "cancel" },
+  //       {
+  //         text: "Choose from Gallery",
+  //         onPress: async () => {
+  //           const result = await ImagePicker.launchImageLibraryAsync({
+  //             mediaTypes: ['images'],
+  //             allowsEditing: true,
+  //             quality: 1,
+  //           });
+
+  //           if (!result.canceled) {
+  //             let uri = result.assets[0].uri;
+
+  //             // Get file info
+  //             const info = await FileSystem.getInfoAsync(uri);
+  //             if (info.exists && info.size) {
+  //               let fileSizeInKB = info.size / 1024;
+  //               // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
+
+  //               // 👉 Compress if size > 500 KB
+  //               if (fileSizeInKB > 100) {
+  //                 console.log("Compressing to around 500 KB...");
+  //                 let compressQuality = 0.7;  // Start with 70% quality
+
+  //                 // Iteratively compress to reach ~500 KB
+  //                 while (fileSizeInKB > 100 && compressQuality > 0.1) {
+  //                   const compressedImage = await ImageManipulator.manipulateAsync(
+  //                     uri,
+  //                     [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
+  //                     { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
+  //                   );
+
+  //                   uri = compressedImage.uri;
+  //                   const compressedInfo = await FileSystem.getInfoAsync(uri);
+  //                   if (compressedInfo.exists && compressedInfo.size) {
+  //                     fileSizeInKB = compressedInfo.size / 1024;
+  //                     console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
+  //                   }
+
+  //                   compressQuality -= 0.1;  // Reduce quality by 10% each step
+  //                 }
+  //               } else {
+  //                 console.log("Size is already under 100 KB, no compression needed.");
+  //               }
+
+  //               setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+  //             } else {
+  //               console.log("Failed to get file info.");
+  //             }
+  //           }
+  //         },
+  //       },
+  //       {
+  //         text: "Take Photo",
+  //         onPress: async () => {
+  //           const result = await ImagePicker.launchCameraAsync({
+  //             allowsEditing: true,
+  //             quality: 1,
+  //           });
+
+  //           if (!result.canceled) {
+  //             let uri = result.assets[0].uri;
+
+  //             // Get file info
+  //             const info = await FileSystem.getInfoAsync(uri);
+  //             if (info.exists && info.size) {
+  //               let fileSizeInKB = info.size / 1024;
+  //               console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
+
+  //               // 👉 Compress if size > 500 KB
+  //               if (fileSizeInKB > 100) {
+  //                 console.log("Compressing to around 500 KB...");
+  //                 let compressQuality = 0.7;  // Start with 70% quality
+
+  //                 // Iteratively compress to reach ~500 KB
+  //                 while (fileSizeInKB > 100 && compressQuality > 0.1) {
+  //                   const compressedImage = await ImageManipulator.manipulateAsync(
+  //                     uri,
+  //                     [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
+  //                     { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
+  //                   );
+
+  //                   uri = compressedImage.uri;
+  //                   const compressedInfo = await FileSystem.getInfoAsync(uri);
+  //                   if (compressedInfo.exists && compressedInfo.size) {
+  //                     fileSizeInKB = compressedInfo.size / 1024;
+  //                     console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
+  //                   }
+
+  //                   compressQuality -= 0.1;  // Reduce quality by 10% each step
+  //                 }
+  //               } else {
+  //                 console.log("Size is already under 100 KB, no compression needed.");
+  //               }
+
+  //               setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+  //             } else {
+  //               console.log("Failed to get file info.");
+  //             }
+  //           }
+  //         },
+  //       },
+
+
+  //     ]
+  //   );
+
+  // };
 
   const renderRegularQuestions = (question: any) => {
     return (
@@ -544,7 +648,7 @@ const QuestionnaireScreen = () => {
                   )}
 
                   {getAnswerDate(question.QuestionID) && question.QuestionID == 10000055 && (
-                    <Text> Aging: {calculateAging(getAnswerDate(question.QuestionID))} days </Text>
+                    <Text> Freshness: {calculateAging(getAnswerDate(question.QuestionID))} days </Text>
                   )}
                   <Text></Text>
                 </>
@@ -724,6 +828,29 @@ const QuestionnaireScreen = () => {
 
                   )}
 
+                  {/* 🆕 No. of Defects Input */}
+                  <TextInput
+                    style={styles.imageinput}
+                    mode="outlined"
+                    placeholder="No. of Defects"
+                    keyboardType="numeric"
+                    onChangeText={(text) =>
+                      handleDefectsChange(question.QuestionID.toString(), text)
+                    }
+                    value={defects[question.QuestionID] || ''}
+                  />
+
+                  {/* Remarks Input */}
+                  <TextInput
+                    style={styles.imageinput}
+                    mode="outlined"
+                    placeholder="Remarks"
+                    keyboardType="default"
+                    onChangeText={(text) =>
+                      handleRemarksChange(question.QuestionID.toString(), text)
+                    }
+                    value={remarks[question.QuestionID] || ''}
+                  />
 
                 </View>
               )}
@@ -733,37 +860,76 @@ const QuestionnaireScreen = () => {
 
         {/* 🌟 Professional Modal for Image Preview */}
         <Modal
-  visible={imageprevModalVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setImageprevModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      {/* 🖼️ Full Image Inside Modal with Contain */}
-      <Image
-        source={{ uri: selectedPrevImage || undefined }}
-        style={styles.modalImage}
-        resizeMode="contain"
-      />
+          visible={imageprevModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setImageprevModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* 🖼️ Full Image Inside Modal with Contain */}
+              <Image
+                source={{ uri: selectedPrevImage || undefined }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
 
-      {/* ❌ Close Button */}
-      <IconButton
-        icon="close"
-        iconColor="#fff"
-        size={24}
-        onPress={() => setImageprevModalVisible(false)}
-        style={styles.closeIconButton}
-      />
-    </View>
-  </View>
-</Modal>
+              {/* ❌ Close Button */}
+              <IconButton
+                icon="close"
+                iconColor="#fff"
+                size={24}
+                onPress={() => setImageprevModalVisible(false)}
+                style={styles.closeIconButton}
+              />
+            </View>
+          </View>
+        </Modal>
 
 
       </Card>
     );
   };
 
+  const handlesetContinueSurey = (value: boolean) => {
+    setContinueSurey(value)
+  }
+
+  const handleProcessSurvey = (status: boolean) => {
+
+    if (status) {
+      setSubmitting(true);
+      const mandatoryQuestions = questions.filter(q => q.Mandatory === "Yes");
+
+      const missingAnswers = mandatoryQuestions.some(q =>
+        !answers.find(a => a.QuestionID === q.QuestionID)?.answer
+      );
+
+      if (missingAnswers) {
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Validation Error',
+          text2: 'Please answer all mandatory questions before submitting.',
+          visibilityTime: 3000,
+        });
+        setSubmitting(false);
+        return;
+      }
+
+    } else {
+      setSubmitting(false);
+    }
+
+    setShowContinueModal(status)
+  }
+  const handleRemarksChange = (questionId: string, text: string) => {
+    setRemarks((prev) => ({ ...prev, [questionId]: text }));
+  };
+
+  const handleDefectsChange = (questionId: string, text: string) => {
+    setDefects((prev) => ({ ...prev, [questionId]: text }));
+  };
 
 
   // Separate image-upload and regular questions
@@ -812,7 +978,7 @@ const QuestionnaireScreen = () => {
                       </Button> */}
 
 
-                      <Button mode="contained" onPress={handleSubmitSurvey} style={styles.submitButton} color="#5bc0de">
+                      <Button mode="contained" onPress={() => handleProcessSurvey(true)} style={styles.submitButton} color="#5bc0de">
                         Submit Survey
                       </Button>
                     </>
@@ -826,6 +992,16 @@ const QuestionnaireScreen = () => {
 
         </View>
         <SubmittedSurvey modalVisible={modalVisible} setModalVisible={setModalVisible} data={completedSurveys} questions={questions} />
+
+        <ContinueSurveyModal
+          visible={showContinueModal}
+          onClose={() => handleProcessSurvey(false)}
+          onSubmit={handleSubmitSurvey}
+          onYesNoChange={(val) => {
+            handlesetContinueSurey(val === 'yes');
+          }}
+        />
+
       </SafeAreaView>
     </>
 
@@ -861,7 +1037,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 2,
-    fontSize: 10,
+    fontSize: 11,
     height: 30,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -982,7 +1158,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
   },
-  
+
   modalCard: {
     width: '85%',
     backgroundColor: '#fff',
@@ -996,7 +1172,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
   },
-  
+
   fullscreenImage: {
     width: '100%',
     height: '100%',  // 🔄 Fill the modal
@@ -1008,7 +1184,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   modalContainer: {
     width: '89%',        // 🔄 89% Width
     height: '70%',       // 🔄 70% Height
@@ -1018,13 +1194,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   modalImage: {
     width: '100%',
     height: '100%',       // 🔄 Fit image fully inside modal
     borderRadius: 10,
   },
-  
+  imageinput: {
+    marginBottom: 2,
+    marginTop: 3,
+    fontSize: 11,
+    height: 38,
+    width: '100%',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+
   closeIconButton: {
     position: 'absolute',
     top: 10,
@@ -1032,7 +1217,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',  // 🔄 Semi-transparent background
     borderRadius: 20,
   },
-  
+
 });
 
 
