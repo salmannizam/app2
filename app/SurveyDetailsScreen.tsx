@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Dialog, Portal, Button } from 'react-native-paper';  // Importing Dialog from react-native-paper
 import Toast from 'react-native-toast-message';
-import { useLocalSearchParams, useRouter } from 'expo-router';  // ✅ Expo Router
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';  // ✅ Expo Router
 import { getResultId } from '../services/api';
 import { getCurrentDateTime } from '../services/dateUtils';
 import SurveyDetailsStyles from '@/styles/SurveyDetailsStyle';
@@ -22,6 +22,22 @@ const SurveyDetailsScreen = () => {
   const params = useLocalSearchParams();
   const ProjectId = Array.isArray(params.ProjectId) ? params.ProjectId[0] : params.ProjectId;
   const surveyId = Array.isArray(params.surveyId) ? params.surveyId[0] : params.surveyId;
+
+  useFocusEffect(
+    useCallback(() => {
+      resetAllState(); // Your function to clear everything
+      return () => {}; // optional cleanup
+    }, [])
+  );
+  
+  const resetAllState = () => {
+    setAddress("");
+    setLocation("");
+    setState("");
+    setOutletName("");
+    setIsModalVisible(false);
+    // Reset other states as needed
+  };
   // Handle zone selection
   const handleZoneSelect = (zone: string) => {
     setStartZone(zone);

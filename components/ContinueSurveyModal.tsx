@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Button, RadioButton } from 'react-native-paper';
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 interface ContinueSurveyModalProps {
     visible: boolean;
     onClose: () => void;
     onSubmit: (value: 'yes' | 'no') => void;
     onYesNoChange: (value: 'yes' | 'no') => void;
+    totalSubmitted: number;
+    continuesurveyModalLoader: boolean;
 }
 
 const ContinueSurveyModal: React.FC<ContinueSurveyModalProps> = ({
@@ -13,6 +15,8 @@ const ContinueSurveyModal: React.FC<ContinueSurveyModalProps> = ({
     onClose,
     onSubmit,
     onYesNoChange,
+    totalSubmitted,
+    continuesurveyModalLoader
 }) => {
     const [selected, setSelected] = useState<'yes' | 'no'>('yes'); // default to 'yes'
 
@@ -66,7 +70,9 @@ const ContinueSurveyModal: React.FC<ContinueSurveyModalProps> = ({
                     <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>
                         Do you want to continue more survey?
                     </Text>
-
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>
+                        Total Product Submitted :{totalSubmitted}
+                    </Text>
                     <RadioButton.Group onValueChange={handleChange} value={selected}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 }}>
                             <RadioButton.Item value="yes" label="Yes" />
@@ -74,9 +80,12 @@ const ContinueSurveyModal: React.FC<ContinueSurveyModalProps> = ({
                         </View>
                     </RadioButton.Group>
 
-                    <Button mode="contained" onPress={() => onSubmit(selected)}>
+                    {continuesurveyModalLoader ? <ActivityIndicator animating={true} size="large" color="#5bc0de" /> : <Button mode="contained" onPress={() => onSubmit(selected)}>
                         Proceed
                     </Button>
+
+                    }
+
                 </View>
             </View>
         </Modal>

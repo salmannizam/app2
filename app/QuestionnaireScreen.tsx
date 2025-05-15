@@ -31,6 +31,7 @@ interface Survey {
 
 const QuestionnaireScreen = () => {
   const [loading, setLoading] = useState(false);
+  const [continuesurveyModalLoader, setContinuesurveyModalLoader] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
   const [imageUris, setImageUris] = useState<any>({}); // Track image per question
@@ -44,6 +45,7 @@ const QuestionnaireScreen = () => {
   const [continueSurey, setContinueSurey] = useState(true); // default to 'yes'
   const [remarks, setRemarks] = useState<{ [key: string]: string }>({});
   const [defects, setDefects] = useState<{ [key: string]: string }>({});
+  const [totalSubmitted, setTotalSubmitted] = useState(0);
 
   const [imageprevModalVisible, setImageprevModalVisible] = useState(false);
   const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
@@ -234,6 +236,7 @@ const QuestionnaireScreen = () => {
 
   const handleSubmitSurvey = async (value: 'yes' | 'no') => {
     setSubmitting(true);
+    setContinuesurveyModalLoader(true)
     const mandatoryQuestions = questions.filter(q => q.Mandatory === "Yes");
 
     const missingAnswers = mandatoryQuestions.some(q =>
@@ -334,11 +337,15 @@ const QuestionnaireScreen = () => {
         const base64Image = await createBase64FromUri(uri, questionId);
         if (base64Image) {
           allImages[questionId] = base64Image;
+
         }
       });
 
+
       await Promise.all(imagePromises);
       surveyData.images = allImages
+      surveyData.allImagesRemarks = remarks
+      surveyData.allImagesDefectCount = defects
     }
 
     // console.log(surveyData)
@@ -366,8 +373,9 @@ const QuestionnaireScreen = () => {
         if (value === 'no') {
           // router.replace('/HomeScreen');
           router.back()
+          setTotalSubmitted(0)
         }
-
+        setTotalSubmitted((prev) => prev + 1)
       } else {
 
         // console.error('Error submitting survey:', response.data.message);
@@ -403,6 +411,7 @@ const QuestionnaireScreen = () => {
     } finally {
       setSubmitting(false);
       setShowContinueModal(false)
+      setContinuesurveyModalLoader(false)
     }
   };
 
@@ -1000,6 +1009,8 @@ const QuestionnaireScreen = () => {
           onYesNoChange={(val) => {
             handlesetContinueSurey(val === 'yes');
           }}
+          totalSubmitted={totalSubmitted}
+          continuesurveyModalLoader={continuesurveyModalLoader}
         />
 
       </SafeAreaView>
@@ -1102,6 +1113,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 5,
     backgroundColor: '#4CAF50',
+    marginBottom:10
   },
   iconButton: {
     position: 'absolute', // Make sure the icon is absolutely positioned
