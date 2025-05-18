@@ -1,13 +1,16 @@
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+// SurveyDetailsScreen.tsx
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, AppState } from 'react-native';
 import { Dialog, Portal, Button } from 'react-native-paper';  // Importing Dialog from react-native-paper
 import Toast from 'react-native-toast-message';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';  // ✅ Expo Router
+import { useFocusEffect, useLocalSearchParams, useRouter, useNavigation } from 'expo-router';  // ✅ Expo Router
 import { getResultId } from '../services/api';
 import { getCurrentDateTime } from '../services/dateUtils';
 import SurveyDetailsStyles from '@/styles/SurveyDetailsStyle';
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { clearData, loadData, saveData } from '@/services/storageUtils';
 
 const SurveyDetailsScreen = () => {
   const [address, setAddress] = useState('');
@@ -19,17 +22,72 @@ const SurveyDetailsScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const router = useRouter();  // ✅ Use router instead of 
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
   const ProjectId = Array.isArray(params.ProjectId) ? params.ProjectId[0] : params.ProjectId;
   const surveyId = Array.isArray(params.surveyId) ? params.surveyId[0] : params.surveyId;
 
+  // Load saved data on mount
+  useEffect(() => {
+    const loadSavedData = async () => {
+      const savedData = await loadData(`SurveyDetails_${ProjectId}`);
+      if (savedData) {
+        setAddress(savedData.address || '');
+        setCountry(savedData.country || 'IN');
+        setLocation(savedData.location || '');
+        setState(savedData.state || '');
+        setOutletName(savedData.outletName || '');
+        setStartZone(savedData.startZone || '');
+      }
+    };
+  // Add app state listener for background/foreground transitions
+  const subscription = AppState.addEventListener('change', async (nextState) => {
+    if (nextState === 'active') {
+      // App came back to foreground - reload data
+      await loadSavedData();
+    }
+  });
+
+  return () => subscription.remove();
+  }, [ProjectId]);
+
+
+  // Save data when any field changes
+  useEffect(() => {
+    const saveFormData = async () => {
+      await saveData(`SurveyDetails_${ProjectId}`, {
+        address,
+        country,
+        location,
+        state,
+        outletName,
+        startZone
+      });
+    };
+    saveFormData();
+  }, [address, country, location, state, outletName, startZone, ProjectId]);
+
+
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+      // Don't clear if submitting (handled in handleSubmit)
+      if (e.data.action.type !== 'NAVIGATE') {
+        await clearData(`SurveyDetails_${ProjectId}`);
+        resetAllState();
+      }
+    });
+  
+    return unsubscribe;
+  }, [navigation, ProjectId]);
+
   useFocusEffect(
     useCallback(() => {
       resetAllState(); // Your function to clear everything
-      return () => {}; // optional cleanup
+      return () => { }; // optional cleanup
     }, [])
   );
-  
+
   const resetAllState = () => {
     setAddress("");
     setLocation("");
@@ -50,6 +108,8 @@ const SurveyDetailsScreen = () => {
       try {
         const response = await getResultId(ProjectId, surveyId, outletName);
         if (response.data.status === "success") {
+          await clearData(`SurveyDetails_${ProjectId}`);
+
           const { FullDateTime, time, date } = getCurrentDateTime();
           const ResultID = response.data?.data?.resultId || FullDateTime;
 

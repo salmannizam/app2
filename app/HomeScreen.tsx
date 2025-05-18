@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+
+//homescreen.tsx
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { validateProjectId } from '../services/api';
-import { useRouter } from 'expo-router';
+import { useRouter,useNavigation  } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons'; // ✅ Icon Library
+import { clearData, loadData, saveData } from '@/services/storageUtils';
 
 const HomeScreen: React.FC = () => {
   const [ProjectId, setProjectId] = useState('');
@@ -13,6 +16,36 @@ const HomeScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
+  const navigation = useNavigation();
+  // Load saved ProjectId on mount
+  useEffect(() => {
+    const loadSavedData = async () => {
+      const savedData = await loadData('HomeScreenData');
+      if (savedData?.ProjectId) {
+        setProjectId(savedData.ProjectId);
+      }
+    };
+    loadSavedData();
+  }, []);
+
+  useEffect(() => {
+    if (ProjectId) {
+      saveData('HomeScreenData', { ProjectId });
+    }
+  }, [ProjectId]);
+
+
+  // Add this useEffect to handle back navigation
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+    if (e.data.action.type === 'GO_BACK') {
+      await clearData('HomeScreenData');
+    }
+  });
+
+  return unsubscribe;
+}, [navigation]);
+
 
   const handleNavigate = async () => {
     if (ProjectId) {

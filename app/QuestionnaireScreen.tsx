@@ -1,5 +1,6 @@
+// QuestionnaireScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, ScrollView, Modal } from 'react-native';
+import { View, StyleSheet, Text, Image, FlatList, ActivityIndicator, TouchableOpacity, Alert, ScrollView, Modal, AppState } from 'react-native';
 import { Button, Card, TextInput, Snackbar, IconButton } from 'react-native-paper';
 import * as ImagePicker from "expo-image-picker";
 import Toast from 'react-native-toast-message';
@@ -11,7 +12,7 @@ import * as FileSystem from 'expo-file-system';
 import { Dialog, Portal } from 'react-native-paper';
 import { getSubmittedSurveys, getSurveyQuestions, submitPreSurveyDetails } from '../services/api';
 import { getCurrentDateTime } from '../services/dateUtils';
-import { useLocalSearchParams } from 'expo-router';  // ✅ Expo Router
+import { useLocalSearchParams, useNavigation } from 'expo-router';  // ✅ Expo Router
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +20,7 @@ import SubmittedSurvey from '@/components/submitted-survey';
 import * as ImageManipulator from 'expo-image-manipulator';
 import ContinueSurveyModal from '@/components/ContinueSurveyModal';
 import { useRouter } from 'expo-router';
+import { clearData, loadData, saveData } from '@/services/storageUtils';
 
 interface Answer {
   QuestionID: number;
@@ -50,10 +52,12 @@ const QuestionnaireScreen = () => {
   const [imageprevModalVisible, setImageprevModalVisible] = useState(false);
   const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
-
+  const [appState, setAppState] = useState(AppState.currentState);
+  
   const router = useRouter();
   const params = useLocalSearchParams();
-
+  const navigation = useNavigation();
+  
   const ProjectId = params.ProjectId?.toString() ?? "";
   const outletName = params.outletName?.toString() ?? "";
   const SurveyID = params.SurveyID?.toString() ?? "";
@@ -65,6 +69,82 @@ const QuestionnaireScreen = () => {
   const state = params.state?.toString() ?? "";
   const StartDate = params.StartDate?.toString() ?? "";
   const StartTime = params.StartTime?.toString() ?? "";
+
+
+  // Load saved data when component mounts
+useEffect(() => {
+  const loadSavedData = async () => {
+    try {
+      const savedData = await loadData(`QuestionnaireData_${SurveyID}`);
+      if (savedData) {
+        setAnswers(savedData.answers || []);
+        setImageUris(savedData.imageUris || {});
+        setRemarks(savedData.remarks || {});
+        setDefects(savedData.defects || {});
+        setShowImageUploads(savedData.showImageUploads || false);
+        
+        // Check if we need to show image upload questions
+        const hasImageQuestionAnswer = savedData.answers?.some(
+          (a: any) => a.QuestionID === 10000057 && a.answer === 'Yes'
+        );
+        setShowImageUploads(hasImageQuestionAnswer);
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+    }
+  };
+
+  loadSavedData();
+
+  // Set up app state listener
+  const subscription = AppState.addEventListener('change', async (nextAppState) => {
+    if (appState.match(/inactive|background/) && nextAppState === 'active') {
+      // App is coming back to foreground - reload data
+      await loadSavedData();
+    }
+    setAppState(nextAppState);
+  });
+
+  return () => {
+    subscription.remove();
+  };
+}, [SurveyID]);
+
+
+  // Save data whenever it changes
+useEffect(() => {
+  const saveCurrentData = async () => {
+    try {
+      await saveData(`QuestionnaireData_${SurveyID}`, {
+        answers,
+        imageUris,
+        remarks,
+        defects,
+        showImageUploads
+      });
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
+  };
+
+  const debounceSave = setTimeout(() => {
+    saveCurrentData();
+  }, 500);
+
+  return () => clearTimeout(debounceSave);
+}, [answers, imageUris, remarks, defects, showImageUploads, SurveyID]);
+
+
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+    // Only clear if going back (not submitting)
+    if (e.data.action.type === 'GO_BACK') {
+      await clearData(`QuestionnaireData_${SurveyID}`);
+    }
+  });
+
+  return unsubscribe;
+}, [navigation, SurveyID]);
 
 
   useEffect(() => {
@@ -340,6 +420,7 @@ const QuestionnaireScreen = () => {
       const response = await submitPreSurveyDetails(surveyData);  // Pass FormData here
       // console.log(response)
       if (response.data.status === "success") {
+        await clearData(`QuestionnaireData_${SurveyID}`);
         // console.log('Survey submitted successfully:', response.data);
         Toast.show({
           type: 'success',
