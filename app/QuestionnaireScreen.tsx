@@ -34,7 +34,7 @@ const QuestionnaireScreen = () => {
   const [continuesurveyModalLoader, setContinuesurveyModalLoader] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
-  const [imageUris, setImageUris] = useState<any>({}); // Track image per question
+  const [imageUris, setImageUris] = useState<{ [key: number | string]: string[] }>({});
   const [openDropdown, setOpenDropdown] = useState<number | null>(null); // Track only the currently open dropdown ID
   const [openAccordion, setOpenAccordion] = useState<{ [key: number]: boolean }>({}); // Track accordion state for image upload
   const [showImageUploads, setShowImageUploads] = useState(false); // Track whether to show image upload questions
@@ -255,25 +255,7 @@ const QuestionnaireScreen = () => {
       return;
     }
 
-    // Get only date-type mandatory questions
-    // const mandatoryDateQuestions = mandatoryQuestions.filter(q => q.Datatype === "Date");
 
-    // const invalidDateAnswer = answers.some(a =>
-    //   mandatoryDateQuestions.some(q => q.QuestionID === a.QuestionID) &&
-    //   !/^\d{8}$/.test(a.answer) // Ensure YYYYMMDD format
-    // );
-
-    // if (invalidDateAnswer) {
-    //   Toast.show({
-    //     type: "error",
-    //     position: "top",
-    //     text1: "Invalid Date Format",
-    //     text2: "Please enter a valid date in YYYYMMDD format.",
-    //     visibilityTime: 3000,
-    //   });
-    //   setSubmitting(false);
-    //   return;
-    // }
 
     const { FullDateTime, date, time } = getCurrentDateTime();
     const deviceId = await getPersistentDeviceId();
@@ -333,11 +315,14 @@ const QuestionnaireScreen = () => {
 
     if (imageUrisExist && question10000057Answer === 'Yes') {
       const imagePromises = Object.keys(imageUris).map(async (questionId) => {
-        const uri = imageUris[questionId];
-        const base64Image = await createBase64FromUri(uri, questionId);
-        if (base64Image) {
-          allImages[questionId] = base64Image;
+        const uris = imageUris[questionId];
 
+        if (Array.isArray(uris)) {
+          const base64Images = await Promise.all(
+            uris.map((uri) => createBase64FromUri(uri, questionId))
+          );
+
+          allImages[questionId] = base64Images.filter(Boolean); // filter out nulls if any
         }
       });
 
@@ -425,10 +410,18 @@ const QuestionnaireScreen = () => {
       return;
     }
 
+    // Check current image count
+    const currentCount = imageUris[questionId]?.length || 0;
+    if (currentCount >= 2) {
+      Alert.alert("Limit Reached", "You can only upload up to 2 images for this question.");
+      return;
+    }
+
+
     // Show options for Camera or Gallery
     Alert.alert(
       "Upload Image",
-      "Choose an option",
+      `Choose an option (${2 - currentCount} remaining)`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -436,27 +429,29 @@ const QuestionnaireScreen = () => {
           onPress: async () => {
             const result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
-              allowsEditing: true,
+              allowsMultipleSelection: false, // 👈 only supported on iOS 14+
+              // allowsEditing: true,
               quality: 1,
+              exif: true
             });
 
-            if (!result.canceled) {
-              let uri = result.assets[0].uri;
-              await processImage(uri, questionId);
+            if (!result.canceled && result.assets.length > 0) {
+              await processImage(result.assets[0].uri, questionId);
             }
+
           },
         },
         {
           text: "Take Photo",
           onPress: async () => {
             const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
+              // allowsEditing: true,
               quality: 1,
+              exif: true
             });
 
             if (!result.canceled) {
-              let uri = result.assets[0].uri;
-              await processImage(uri, questionId);
+              await processImage(result.assets[0].uri, questionId);
             }
           },
         },
@@ -499,136 +494,15 @@ const QuestionnaireScreen = () => {
       }
 
       // Update the state with the final URI
-      setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
+      setImageUris(prev => ({
+        ...prev,
+        [questionId]: [...(prev[questionId] || []), uri], // append image
+      }));
     } else {
       // console.log("Failed to get file info.");
     }
   };
 
-
-  // const handleImageUpload = async (questionId: number) => {
-  //   // Request media library permissions
-  //   const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-  //   const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  //   if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
-  //     console.log('Permission to access camera or media library is required.');
-  //     return;
-  //   }
-
-  //   // Show options for Camera or Gallery
-  //   Alert.alert(
-  //     "Upload Image",
-  //     "Choose an option",
-  //     [
-  //       { text: "Cancel", style: "cancel" },
-  //       {
-  //         text: "Choose from Gallery",
-  //         onPress: async () => {
-  //           const result = await ImagePicker.launchImageLibraryAsync({
-  //             mediaTypes: ['images'],
-  //             allowsEditing: true,
-  //             quality: 1,
-  //           });
-
-  //           if (!result.canceled) {
-  //             let uri = result.assets[0].uri;
-
-  //             // Get file info
-  //             const info = await FileSystem.getInfoAsync(uri);
-  //             if (info.exists && info.size) {
-  //               let fileSizeInKB = info.size / 1024;
-  //               // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-
-  //               // 👉 Compress if size > 500 KB
-  //               if (fileSizeInKB > 100) {
-  //                 console.log("Compressing to around 500 KB...");
-  //                 let compressQuality = 0.7;  // Start with 70% quality
-
-  //                 // Iteratively compress to reach ~500 KB
-  //                 while (fileSizeInKB > 100 && compressQuality > 0.1) {
-  //                   const compressedImage = await ImageManipulator.manipulateAsync(
-  //                     uri,
-  //                     [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
-  //                     { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
-  //                   );
-
-  //                   uri = compressedImage.uri;
-  //                   const compressedInfo = await FileSystem.getInfoAsync(uri);
-  //                   if (compressedInfo.exists && compressedInfo.size) {
-  //                     fileSizeInKB = compressedInfo.size / 1024;
-  //                     console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
-  //                   }
-
-  //                   compressQuality -= 0.1;  // Reduce quality by 10% each step
-  //                 }
-  //               } else {
-  //                 console.log("Size is already under 100 KB, no compression needed.");
-  //               }
-
-  //               setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
-  //             } else {
-  //               console.log("Failed to get file info.");
-  //             }
-  //           }
-  //         },
-  //       },
-  //       {
-  //         text: "Take Photo",
-  //         onPress: async () => {
-  //           const result = await ImagePicker.launchCameraAsync({
-  //             allowsEditing: true,
-  //             quality: 1,
-  //           });
-
-  //           if (!result.canceled) {
-  //             let uri = result.assets[0].uri;
-
-  //             // Get file info
-  //             const info = await FileSystem.getInfoAsync(uri);
-  //             if (info.exists && info.size) {
-  //               let fileSizeInKB = info.size / 1024;
-  //               console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-
-  //               // 👉 Compress if size > 500 KB
-  //               if (fileSizeInKB > 100) {
-  //                 console.log("Compressing to around 500 KB...");
-  //                 let compressQuality = 0.7;  // Start with 70% quality
-
-  //                 // Iteratively compress to reach ~500 KB
-  //                 while (fileSizeInKB > 100 && compressQuality > 0.1) {
-  //                   const compressedImage = await ImageManipulator.manipulateAsync(
-  //                     uri,
-  //                     [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
-  //                     { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
-  //                   );
-
-  //                   uri = compressedImage.uri;
-  //                   const compressedInfo = await FileSystem.getInfoAsync(uri);
-  //                   if (compressedInfo.exists && compressedInfo.size) {
-  //                     fileSizeInKB = compressedInfo.size / 1024;
-  //                     console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
-  //                   }
-
-  //                   compressQuality -= 0.1;  // Reduce quality by 10% each step
-  //                 }
-  //               } else {
-  //                 console.log("Size is already under 100 KB, no compression needed.");
-  //               }
-
-  //               setImageUris((prev: any) => ({ ...prev, [questionId]: uri }));
-  //             } else {
-  //               console.log("Failed to get file info.");
-  //             }
-  //           }
-  //         },
-  //       },
-
-
-  //     ]
-  //   );
-
-  // };
 
   const renderRegularQuestions = (question: any) => {
     return (
@@ -769,6 +643,9 @@ const QuestionnaireScreen = () => {
   };
 
   const renderImageUploadQuestions = (question: any) => {
+    const currentImageCount = imageUris[question.QuestionID]?.length || 0;
+    const canUploadMore = currentImageCount < 2;
+
     return (
       <Card key={question.QuestionID} style={styles.card}>
         <Card.Content>
@@ -787,43 +664,64 @@ const QuestionnaireScreen = () => {
               {openAccordion[question.QuestionID] && (
                 <View style={styles.imageContainer}>
                   {/* <Text style={styles.imageText}>Upload Image</Text> */}
-                  {imageUris[question.QuestionID] ? (
-                    <View style={styles.imagePreviewContainer}>
-                      <Image
-                        source={{ uri: imageUris[question.QuestionID] || undefined }}
-                        style={styles.imagePreview}
-                      />
+                  {currentImageCount > 0 ? (
+                    <>
+                      <Text style={styles.imageCountText}>
+                        {currentImageCount}/2 images uploaded
+                      </Text>
+                      <ScrollView horizontal>
+                        {imageUris[question.QuestionID].map((uri: any, index: any) => (
+                          <View key={`${uri}-${index}`} style={styles.imagePreviewContainer}>
+                            <Image
+                              source={{ uri }}
+                              style={styles.imagePreview}
+                            />
 
-                      {/* 👁️ View Button to Open Modal */}
-                      <IconButton
-                        icon="eye"
-                        iconColor="#3498db"  // 🔄 Soft blue for professional look
-                        onPress={() => {
-                          setSelectedPrevImage(imageUris[question.QuestionID]);
-                          setImageprevModalVisible(true);
-                        }}
-                        style={[styles.viewButton, styles.previewButton]}  // Added new style
-                      />
+                            {/* 👁️ View Button to Open Modal */}
+                            <IconButton
+                              icon="eye"
+                              iconColor="#3498db"  // 🔄 Soft blue for professional look
+                              onPress={() => {
+                                setSelectedPrevImage(uri);
+                                setImageprevModalVisible(true);
+                              }}
+                              style={[styles.viewButton, styles.previewButton]}  // Added new style
+                            />
 
-                      {/* 🗑️ Cancel Button to Remove Image */}
-                      <Button
-                        mode="text"
-                        icon="close-circle"
-                        onPress={() => {
-                          const updatedImageUris = { ...imageUris };
-                          delete updatedImageUris[question.QuestionID];
-                          setImageUris(updatedImageUris);  // 🟢 Remove image from state
-                        }}
-                        style={styles.removeButton}
-                        labelStyle={{ color: 'red' }}
-                      >
-                        Remove Image
-                      </Button>
-                    </View>
+                            {/* 🗑️ Cancel Button to Remove Image */}
+                            <Button
+                              mode="text"
+                              icon="close-circle"
+                              onPress={() => {
+                                setImageUris((prev: { [x: string]: any[]; }) => ({
+                                  ...prev,
+                                  [question.QuestionID]: prev[question.QuestionID].filter((_, i) => i !== index),
+                                }));
+                              }}
+                              style={styles.removeButton}
+                              labelStyle={{ color: 'red' }}
+                            >
+                              Remove Image
+                            </Button>
+                          </View>
+                        ))}
+                      </ScrollView>
+
+                      {canUploadMore && (
+                        <Button
+                          icon="plus"
+                          mode="outlined"
+                          onPress={() => handleImageUpload(question.QuestionID)}
+                          style={styles.uploadMoreButton}
+                        >
+                          Upload More ({2 - currentImageCount} remaining)
+                        </Button>
+                      )}
+                    </>
 
                   ) : (
                     <>
-                      <Text style={styles.imageText}>No image selected</Text>
+                      <Text style={styles.imageText}>No images uploaded</Text>
                       <Button
                         key={`upload-${question.QuestionID}`} // Unique key here
                         icon="camera"
@@ -1088,6 +986,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     alignItems: 'center',
     marginBottom: 2,
+    marginTop: 2,
   },
   imageText: {
     textAlign: 'center',
@@ -1108,12 +1007,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     marginTop: 15,
   },
-
+  imageCountText: {
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#666',
+  },
+  uploadMoreButton: {
+    marginTop: 10,
+    borderColor: '#3498db',
+    borderWidth: 1,
+  },
   submitButton: {
     flex: 1,
     marginHorizontal: 5,
     backgroundColor: '#4CAF50',
-    marginBottom:10
+    marginBottom: 10
   },
   iconButton: {
     position: 'absolute', // Make sure the icon is absolutely positioned
