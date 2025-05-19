@@ -21,6 +21,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import ContinueSurveyModal from '@/components/ContinueSurveyModal';
 import { useRouter } from 'expo-router';
 import { clearData, loadData, saveData } from '@/services/storageUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Answer {
   QuestionID: number;
@@ -53,11 +54,11 @@ const QuestionnaireScreen = () => {
   const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
   const [appState, setAppState] = useState(AppState.currentState);
-  
+
   const router = useRouter();
   const params = useLocalSearchParams();
   const navigation = useNavigation();
-  
+
   const ProjectId = params.ProjectId?.toString() ?? "";
   const outletName = params.outletName?.toString() ?? "";
   const SurveyID = params.SurveyID?.toString() ?? "";
@@ -70,82 +71,143 @@ const QuestionnaireScreen = () => {
   const StartDate = params.StartDate?.toString() ?? "";
   const StartTime = params.StartTime?.toString() ?? "";
 
+  const encodedOutletName = encodeURIComponent(outletName);
+
+  // QuestionnaireScreen.tsx (partial - focused on data persistence)
+  const MAX_CACHE_MINUTES = 15;
 
   // Load saved data when component mounts
-useEffect(() => {
-  const loadSavedData = async () => {
-    try {
-      const savedData = await loadData(`QuestionnaireData_${SurveyID}`);
-      if (savedData) {
+  useEffect(() => {
+    let isMounted = true;
+
+    const clearExpiredData = async () => {
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const now = Date.now();
+
+        for (const key of allKeys) {
+          if (key.startsWith('QuestionnaireData_')) {
+            const data = await AsyncStorage.getItem(key);
+            if (data) {
+              const { _timestamp } = JSON.parse(data);
+              if (_timestamp && now - _timestamp > MAX_CACHE_MINUTES * 60 * 1000) {
+                await AsyncStorage.removeItem(key);
+                console.log('Cleared expired data for:', key);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error clearing expired data:', err);
+      }
+    };
+
+    const clearOtherOutletData = async () => {
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const currentKey = `QuestionnaireData_${encodedOutletName}`;
+
+        const keysToDelete = allKeys.filter(
+          key => key.startsWith('QuestionnaireData_') &&
+            key !== currentKey
+        );
+
+        if (keysToDelete.length > 0) {
+          await AsyncStorage.multiRemove(keysToDelete);
+        }
+      } catch (err) {
+        console.error('Error clearing other outlet data:', err);
+      }
+    };
+
+    const loadSavedData = async () => {
+      try {
+        const savedData = await loadData(`QuestionnaireData_${encodedOutletName}`);
+
+        if (!isMounted || !savedData) return;
+
+        // Check if data is expired
+        const isExpired = savedData._timestamp &&
+          (Date.now() - savedData._timestamp > MAX_CACHE_MINUTES * 60 * 1000);
+
+        if (isExpired) {
+          await clearData(`QuestionnaireData_${encodedOutletName}`);
+          return;
+        }
+
         setAnswers(savedData.answers || []);
         setImageUris(savedData.imageUris || {});
         setRemarks(savedData.remarks || {});
         setDefects(savedData.defects || {});
-        setShowImageUploads(savedData.showImageUploads || false);
-        
-        // Check if we need to show image upload questions
+
         const hasImageQuestionAnswer = savedData.answers?.some(
           (a: any) => a.QuestionID === 10000057 && a.answer === 'Yes'
         );
-        setShowImageUploads(hasImageQuestionAnswer);
+        setShowImageUploads(hasImageQuestionAnswer || savedData.showImageUploads || false);
+
+      } catch (error) {
+        console.error('Error loading saved data:', error);
       }
-    } catch (error) {
-      console.error('Error loading saved data:', error);
-    }
-  };
+    };
 
-  loadSavedData();
-
-  // Set up app state listener
-  const subscription = AppState.addEventListener('change', async (nextAppState) => {
-    if (appState.match(/inactive|background/) && nextAppState === 'active') {
-      // App is coming back to foreground - reload data
+    const initialize = async () => {
+      await clearExpiredData();
+      await clearOtherOutletData();
       await loadSavedData();
-    }
-    setAppState(nextAppState);
-  });
+    };
 
-  return () => {
-    subscription.remove();
-  };
-}, [SurveyID]);
+    initialize();
 
+    // App state listener for background/foreground transitions
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (!isMounted) return;
 
-  // Save data whenever it changes
-useEffect(() => {
-  const saveCurrentData = async () => {
-    try {
-      await saveData(`QuestionnaireData_${SurveyID}`, {
-        answers,
-        imageUris,
-        remarks,
-        defects,
-        showImageUploads
-      });
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
-  };
+      if (appState.match(/inactive|background/) && nextAppState === 'active') {
+        await loadSavedData(); // Only reload current data
+      }
+      setAppState(nextAppState);
+    });
 
-  const debounceSave = setTimeout(() => {
-    saveCurrentData();
-  }, 500);
-
-  return () => clearTimeout(debounceSave);
-}, [answers, imageUris, remarks, defects, showImageUploads, SurveyID]);
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, [encodedOutletName]);
 
 
-useEffect(() => {
-  const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
-    // Only clear if going back (not submitting)
-    if (e.data.action.type === 'GO_BACK') {
-      await clearData(`QuestionnaireData_${SurveyID}`);
-    }
-  });
+  // Save data whenever it changes (with timestamp)
+  useEffect(() => {
+    const saveCurrentData = async () => {
+      try {
+        await saveData(`QuestionnaireData_${encodedOutletName}`, {
+          answers,
+          imageUris,
+          remarks,
+          defects,
+          showImageUploads,
+          _timestamp: Date.now() // Add current timestamp
+        });
+      } catch (error) {
+        console.error('Error saving data:', error);
+      }
+    };
 
-  return unsubscribe;
-}, [navigation, SurveyID]);
+    const debounceTimer = setTimeout(() => {
+      saveCurrentData();
+    }, 500);
 
+    return () => clearTimeout(debounceTimer);
+  }, [answers, imageUris, remarks, defects, showImageUploads, encodedOutletName]);
+
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+      if (e.data.action.type === 'GO_BACK') {
+        await clearData(`QuestionnaireData_${encodedOutletName}`);
+      }
+    });
+    return unsubscribe;
+  }, [navigation, encodedOutletName]);
 
   useEffect(() => {
     setLoading(true)
@@ -420,7 +482,7 @@ useEffect(() => {
       const response = await submitPreSurveyDetails(surveyData);  // Pass FormData here
       // console.log(response)
       if (response.data.status === "success") {
-        await clearData(`QuestionnaireData_${SurveyID}`);
+        await clearData(`QuestionnaireData_${encodedOutletName}`);
         // console.log('Survey submitted successfully:', response.data);
         Toast.show({
           type: 'success',
@@ -430,11 +492,15 @@ useEffect(() => {
           visibilityTime: 3000,
         });
 
+
+        setRemarks({});
+        setDefects({});
+
         setAnswers([]);  // Clear the answers array
         setImageUris({}); // Clear the image URIs
         setShowImageUploads(false);  // Hide image upload questions
         setOpenAccordion({});  // Reset accordion state
-        getSubmittedSurvey(ProjectId, outletName)
+        // getSubmittedSurvey(ProjectId, outletName)
 
         if (value === 'no') {
           // router.replace('/HomeScreen');
@@ -919,6 +985,16 @@ useEffect(() => {
     setDefects((prev) => ({ ...prev, [questionId]: text }));
   };
 
+  const handleResetSurvey = ()=> {
+    
+    setRemarks({});
+    setDefects({});
+
+    setAnswers([]);  // Clear the answers array
+    setImageUris({}); // Clear the image URIs
+    setShowImageUploads(false);  // Hide image upload questions
+    setOpenAccordion({});  // Reset accordion stateF
+  }
 
   // Separate image-upload and regular questions
   const regularQuestions = questions.filter(q => q.Questiontype !== 'Image');
@@ -957,13 +1033,10 @@ useEffect(() => {
                     <ActivityIndicator animating={true} size="large" color="#5bc0de" />
                   ) : (
                     <>
-                      {/* <Button
-                        mode="contained"
-                        onPress={() => { setModalVisible(true); }}
-                        style={{ backgroundColor: '#92850c' }} // Matching background color and white text
-                      >
-                        Submitted Survey
-                      </Button> */}
+                    <Button mode="contained" onPress={() => handleResetSurvey()} style={styles.closeButton} color="#5bc0de">
+                        Reset
+                      </Button>
+           
 
 
                       <Button mode="contained" onPress={() => handleProcessSurvey(true)} style={styles.submitButton} color="#5bc0de">
@@ -1148,7 +1221,9 @@ const styles = StyleSheet.create({
 
   closeButton: {
     backgroundColor: '#FF6F61',
-    marginVertical: 5,
+    flex: 1,
+    marginHorizontal: 5,
+    marginBottom: 10
   },
   previewButton: {
     backgroundColor: '#fff',
