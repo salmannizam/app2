@@ -17,7 +17,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SubmittedSurvey from '@/components/submitted-survey';
-import * as ImageManipulator from 'expo-image-manipulator';
+import ImageResizer from 'react-native-image-resizer';
 import ContinueSurveyModal from '@/components/ContinueSurveyModal';
 import { useRouter } from 'expo-router';
 import { clearData, loadData, saveData } from '@/services/storageUtils';
@@ -576,9 +576,8 @@ const QuestionnaireScreen = () => {
           onPress: async () => {
             const result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
-              allowsMultipleSelection: false, // 👈 only supported on iOS 14+
               // allowsEditing: true,
-              quality: 1,
+              quality: 0.5,
               exif: true
             });
 
@@ -592,8 +591,7 @@ const QuestionnaireScreen = () => {
           text: "Take Photo",
           onPress: async () => {
             const result = await ImagePicker.launchCameraAsync({
-              // allowsEditing: true,
-              quality: 1,
+              quality: 0.5, // Lower quality
               exif: true
             });
 
@@ -608,48 +606,71 @@ const QuestionnaireScreen = () => {
 
   // Function to process the image (compress and save it)
   const processImage = async (uri: string, questionId: number) => {
-    // Get file info
-    const info = await FileSystem.getInfoAsync(uri);
-    if (info.exists && info.size) {
-      let fileSizeInKB = info.size / 1024;
-      // console.log(`Original Size: ${fileSizeInKB.toFixed(2)} KB`);
-
-      // 👉 Compress if size > 100 KB
-      if (fileSizeInKB > 100) {
-        // console.log("Compressing to around 100 KB...");
-        let compressQuality = 0.7;  // Start with 70% quality
-
-        // Iteratively compress to reach ~100 KB
-        while (fileSizeInKB > 100 && compressQuality > 0.1) {
-          const compressedImage = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 1024 } }],  // Resize to max width of 1024px
-            { compress: compressQuality, format: ImageManipulator.SaveFormat.JPEG }
-          );
-
-          uri = compressedImage.uri;
-          const compressedInfo = await FileSystem.getInfoAsync(uri);
-          if (compressedInfo.exists && compressedInfo.size) {
-            fileSizeInKB = compressedInfo.size / 1024;
-            // console.log(`Compressed to: ${fileSizeInKB.toFixed(2)} KB at ${compressQuality * 100}% quality`);
-          }
-
-          compressQuality -= 0.1;  // Reduce quality by 10% each step
-        }
-      } else {
-        // console.log("Size is already under 100 KB, no compression needed.");
+    try {
+      // 1. Get initial file info
+      const info = await FileSystem.getInfoAsync(uri);
+      if (!info.exists || !info.size) {
+        throw new Error('Image file not found');
       }
-
-      // Update the state with the final URI
+  
+      let currentUri = uri;
+      let fileSizeInKB = info.size / 1024;
+  
+      const targetSizeKB = 100;
+      let quality = 70; // Starting quality for compression (percent)
+  
+      // 2. Progressive compression loop using react-native-image-resizer
+      let iteration = 0;
+      const maxIterations = 7;
+  
+      while (fileSizeInKB > targetSizeKB && quality > 10 && iteration < maxIterations) {
+        try {
+          // Resize & compress image
+          const resizedImage = await ImageResizer.createResizedImage(
+            currentUri,
+            1024, // max width
+            1024, // max height (maintain aspect ratio)
+            'JPEG',
+            quality // compression quality (1-100)
+          );
+  
+          // Get info for resized image
+          const resizedInfo = await FileSystem.getInfoAsync(resizedImage.uri);
+          if (!resizedInfo.exists || !resizedInfo.size) {
+            throw new Error('Compression failed');
+          }
+  
+          // Delete previous temp file if it’s not original
+          if (currentUri !== uri) {
+            await FileSystem.deleteAsync(currentUri).catch(() => {});
+          }
+  
+          currentUri = resizedImage.uri;
+          fileSizeInKB = resizedInfo.size / 1024;
+          quality -= 10;
+          iteration++;
+        } catch (error) {
+          console.error('Compression iteration failed:', error);
+          break;
+        }
+      }
+  
+      // 3. Update state with final compressed image URI
       setImageUris(prev => ({
         ...prev,
-        [questionId]: [...(prev[questionId] || []), uri], // append image
+        [questionId]: [...(prev[questionId] || []), currentUri],
       }));
-    } else {
-      // console.log("Failed to get file info.");
+  
+    } catch (error) {
+      console.error('Image processing failed:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Image processing error',
+        text2: 'Could not process the image. Please try again.',
+      });
+      throw error;
     }
   };
-
 
   const renderRegularQuestions = (question: any) => {
     return (

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "survey",
-    "slug": "survey",
+    "name": "Survey",
+    "slug": "Survey",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
