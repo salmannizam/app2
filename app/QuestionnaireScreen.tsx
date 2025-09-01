@@ -22,6 +22,7 @@ import ContinueSurveyModal from '@/components/ContinueSurveyModal';
 import { useRouter } from 'expo-router';
 import { clearData, loadData, saveData } from '@/services/storageUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CameraModal from '@/components/CameraModal';
 
 interface Answer {
   QuestionID: number;
@@ -54,6 +55,10 @@ const QuestionnaireScreen = () => {
   const [selectedPrevImage, setSelectedPrevImage] = useState<string | null>(null);
   const [activeDatePicker, setActiveDatePicker] = useState<number | null>(null); // Store active question ID for the picker
   const [appState, setAppState] = useState(AppState.currentState);
+
+  const [cameraModalVisible, setCameraModalVisible] = useState(false);
+  const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
+
 
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -589,16 +594,10 @@ const QuestionnaireScreen = () => {
         },
         {
           text: "Take Photo",
-          onPress: async () => {
-            const result = await ImagePicker.launchCameraAsync({
-              quality: 0.5, // Lower quality
-              exif: true
-            });
-
-            if (!result.canceled) {
-              await processImage(result.assets[0].uri, questionId);
-            }
-          },
+          onPress: () => {
+            setCameraModalVisible(true);
+            setCurrentQuestionId(questionId); // Store this in state
+          }
         },
       ]
     );
@@ -612,17 +611,17 @@ const QuestionnaireScreen = () => {
       if (!info.exists || !info.size) {
         throw new Error('Image file not found');
       }
-  
+
       let currentUri = uri;
       let fileSizeInKB = info.size / 1024;
-  
+
       const targetSizeKB = 100;
       let quality = 70; // Starting quality for compression (percent)
-  
+
       // 2. Progressive compression loop using react-native-image-resizer
       let iteration = 0;
       const maxIterations = 7;
-  
+
       while (fileSizeInKB > targetSizeKB && quality > 10 && iteration < maxIterations) {
         try {
           // Resize & compress image
@@ -633,18 +632,18 @@ const QuestionnaireScreen = () => {
             'JPEG',
             quality // compression quality (1-100)
           );
-  
+
           // Get info for resized image
           const resizedInfo = await FileSystem.getInfoAsync(resizedImage.uri);
           if (!resizedInfo.exists || !resizedInfo.size) {
             throw new Error('Compression failed');
           }
-  
+
           // Delete previous temp file if it’s not original
           if (currentUri !== uri) {
-            await FileSystem.deleteAsync(currentUri).catch(() => {});
+            await FileSystem.deleteAsync(currentUri).catch(() => { });
           }
-  
+
           currentUri = resizedImage.uri;
           fileSizeInKB = resizedInfo.size / 1024;
           quality -= 10;
@@ -654,13 +653,13 @@ const QuestionnaireScreen = () => {
           break;
         }
       }
-  
+
       // 3. Update state with final compressed image URI
       setImageUris(prev => ({
         ...prev,
         [questionId]: [...(prev[questionId] || []), currentUri],
       }));
-  
+
     } catch (error) {
       console.error('Image processing failed:', error);
       Toast.show({
@@ -1006,8 +1005,8 @@ const QuestionnaireScreen = () => {
     setDefects((prev) => ({ ...prev, [questionId]: text }));
   };
 
-  const handleResetSurvey = ()=> {
-    
+  const handleResetSurvey = () => {
+
     setRemarks({});
     setDefects({});
 
@@ -1054,10 +1053,10 @@ const QuestionnaireScreen = () => {
                     <ActivityIndicator animating={true} size="large" color="#5bc0de" />
                   ) : (
                     <>
-                    <Button mode="contained" onPress={() => handleResetSurvey()} style={styles.closeButton} color="#5bc0de">
+                      <Button mode="contained" onPress={() => handleResetSurvey()} style={styles.closeButton} color="#5bc0de">
                         Reset
                       </Button>
-           
+
 
 
                       <Button mode="contained" onPress={() => handleProcessSurvey(true)} style={styles.submitButton} color="#5bc0de">
@@ -1085,6 +1084,20 @@ const QuestionnaireScreen = () => {
           totalSubmitted={totalSubmitted}
           continuesurveyModalLoader={continuesurveyModalLoader}
         />
+
+        {cameraModalVisible && currentQuestionId !== null && (
+          <CameraModal
+            visible={cameraModalVisible}
+            questionId={currentQuestionId}
+            onClose={() => {
+              setCameraModalVisible(false);
+              setCurrentQuestionId(null);
+            }}
+            onImageCaptured={async (qid, uri) => {
+              await processImage(uri, qid);
+            }}
+          />
+        )}
 
       </SafeAreaView>
     </>
